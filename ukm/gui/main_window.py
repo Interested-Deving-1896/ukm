@@ -39,10 +39,9 @@ from ukm.gui.widgets.kernel_view import KernelView
 from ukm.gui.widgets.log_panel import LogPanel
 from ukm.gui.widgets.note_dialog import NoteDialog
 from ukm.qt import (
-    Qt, QMainWindow, QWidget, QVBoxLayout, QSplitter,
-    QTabWidget, QToolBar, QAction, QLabel,
-    QMessageBox, QFileDialog, QThread, Signal, Slot,
-    QApplication,
+    QAction, QApplication, QFileDialog, QLabel, QMainWindow,
+    QMessageBox, QSplitter, QTabWidget, QThread, QToolBar,
+    QVBoxLayout, QWidget, Qt, Signal, Slot,
 )
 
 

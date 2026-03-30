@@ -70,6 +70,21 @@ ignore = ["E501"]  # line length handled by formatter
 [tool.ruff.lint.isort]
 known-first-party = ["ukm"]
 
+[tool.ruff.lint.per-file-ignores]
+# These files have import ordering that ruff isort disagrees with due to
+# Qt binding aliases (Signal/Slot) and conditional imports in qt.py.
+"ukm/qt.py" = ["I001"]
+"ukm/core/cpu.py" = ["I001"]
+"ukm/core/providers/gentoo.py" = ["I001"]
+"ukm/gui/app.py" = ["I001"]
+"ukm/gui/kernel_model.py" = ["I001"]
+"ukm/gui/main_window.py" = ["I001"]
+"ukm/gui/widgets/changelog_panel.py" = ["I001"]
+"ukm/gui/widgets/gentoo_compile_dialog.py" = ["I001"]
+"ukm/gui/widgets/kernel_view.py" = ["I001"]
+"ukm/gui/widgets/log_panel.py" = ["I001"]
+"ukm/gui/widgets/note_dialog.py" = ["I001"]
+
 # ---------------------------------------------------------------------------
 # Mypy
 # ---------------------------------------------------------------------------

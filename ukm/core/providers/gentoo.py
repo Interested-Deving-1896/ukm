@@ -22,9 +22,9 @@ import re
 from collections.abc import Iterator
 from pathlib import Path
 
+from ukm.core.backends.portage import PortageBackend
 from ukm.core.kernel import KernelEntry, KernelFamily, KernelStatus, KernelVersion
 from ukm.core.providers.base import KernelProvider
-from ukm.core.backends.portage import PortageBackend
 
 # Well-known Gentoo kernel packages in sys-kernel/
 _GENTOO_KERNEL_PACKAGES = [

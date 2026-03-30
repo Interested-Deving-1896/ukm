@@ -7,11 +7,10 @@ Supports sorting and filtering via QSortFilterProxyModel.
 
 from __future__ import annotations
 
-from ukm.qt import (
-    Qt, QAbstractTableModel,
-    QColor, QFont,
-)
 from ukm.core.kernel import KernelEntry, KernelStatus
+from ukm.qt import (
+    QAbstractTableModel, QColor, QFont, QModelIndex, Qt,
+)
 
 # Column indices
 COL_VERSION  = 0
