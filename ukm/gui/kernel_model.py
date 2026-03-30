@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from ukm.qt import (
     Qt, QAbstractTableModel, QModelIndex, QPersistentModelIndex,
-    QColor, QFont, QBrush,
+    QColor, QFont,
 )
 from ukm.core.kernel import KernelEntry, KernelStatus
 
@@ -116,15 +116,14 @@ class KernelTableModel(QAbstractTableModel):
 
     @staticmethod
     def _display(entry: KernelEntry, col: int) -> str:
-        match col:
-            case 0: return str(entry.version)
-            case 1: return entry.flavor
-            case 2: return entry.family.value
-            case 3: return entry.arch
-            case 4: return entry.status.name.lower()
-            case 5: return "●" if entry.held else ""
-            case 6: return entry.provider_id
-            case 7: return entry.notes[:60] + "…" if len(entry.notes) > 60 else entry.notes
+        if col == 0: return str(entry.version)
+        if col == 1: return entry.flavor
+        if col == 2: return entry.family.value
+        if col == 3: return entry.arch
+        if col == 4: return entry.status.name.lower()
+        if col == 5: return "●" if entry.held else ""
+        if col == 6: return entry.provider_id
+        if col == 7: return entry.notes[:60] + "…" if len(entry.notes) > 60 else entry.notes
         return ""
 
     @staticmethod

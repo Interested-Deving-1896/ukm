@@ -7,7 +7,7 @@ name = "ukm"
 version = "0.1.0"
 description = "Universal Kernel Manager — install, remove, and manage Linux kernels across all major distros and architectures"
 readme = "README.md"
-license = { spdx = "GPL-3.0-or-later" }
+license = { text = "GPL-3.0-or-later" }
 requires-python = ">=3.11"
 authors = [
     { name = "ukm contributors" },

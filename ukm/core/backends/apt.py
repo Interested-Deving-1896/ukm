@@ -43,7 +43,6 @@ class AptBackend(PackageBackend):
         )
 
     def hold(self, packages: list[str]) -> tuple[int, str, str]:
-        marks = [f"{p} hold" for p in packages]
         cmd = privilege_escalation_cmd() + ["apt-mark", "hold"] + packages
         return self._run(cmd)
 

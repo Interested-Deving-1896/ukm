@@ -140,6 +140,11 @@ def main(argv: list[str] | None = None) -> int:
 # Command implementations
 # ---------------------------------------------------------------------------
 
+def _dkms_summary() -> str:
+    from ukm.core.dkms import status_summary
+    return status_summary()
+
+
 def cmd_info(mgr: KernelManager) -> int:
     info = system_info()
     from ukm.core.cpu import recommended_xanmod_level, xanmod_level_description
@@ -156,7 +161,7 @@ def cmd_info(mgr: KernelManager) -> int:
         "pkexec":                  info.has_pkexec,
         "sudo":                    info.has_sudo,
         "recommended_xanmod":      xanmod_level,
-        "dkms":                    __import__("ukm.core.dkms", fromlist=["status_summary"]).status_summary(),
+        "dkms":                    _dkms_summary(),
     }
     if out._json_mode:
         out.print_json(data)

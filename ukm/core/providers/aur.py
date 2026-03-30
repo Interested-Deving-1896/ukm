@@ -13,7 +13,7 @@ handles privilege escalation internally for the final pacman -U step.
 from __future__ import annotations
 
 import shutil
-import subprocess
+import subprocess  # used in _makepkg_cmd
 from typing import Iterator
 
 from ukm.core.kernel import KernelEntry, KernelFamily, KernelStatus, KernelVersion
