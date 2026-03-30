@@ -103,3 +103,95 @@ class TestDkmsAutoinstall:
         mock_run.return_value = mock.MagicMock(returncode=0, stdout="")
         lines = list(autoinstall("6.9.0-50-generic"))
         assert any("nothing to rebuild" in line.lower() for line in lines)
+
+    @mock.patch("shutil.which", return_value="/usr/sbin/dkms")
+    @mock.patch("subprocess.run")
+    @mock.patch("subprocess.Popen")
+    def test_autoinstall_success(self, mock_popen, mock_run, _):
+        from ukm.core.dkms import autoinstall
+
+        # status() call returns one module
+        mock_run.return_value = mock.MagicMock(
+            returncode=0, stdout="nvidia/550.0, 6.8.0, x86_64: installed\n"
+        )
+        proc = mock.MagicMock()
+        proc.stdout = iter(["Building nvidia...\n", "DKMS: install completed.\n"])
+        proc.returncode = 0
+        proc.wait.return_value = 0
+        mock_popen.return_value = proc
+
+        with mock.patch(
+            "ukm.core.system.privilege_escalation_cmd", return_value=[]
+        ):
+            lines = list(autoinstall("6.9.0"))
+        assert any("✓" in line for line in lines)
+
+    @mock.patch("shutil.which", return_value="/usr/sbin/dkms")
+    @mock.patch("subprocess.run")
+    @mock.patch("subprocess.Popen")
+    def test_autoinstall_failure(self, mock_popen, mock_run, _):
+        from ukm.core.dkms import autoinstall
+
+        mock_run.return_value = mock.MagicMock(
+            returncode=0, stdout="nvidia/550.0, 6.8.0, x86_64: installed\n"
+        )
+        proc = mock.MagicMock()
+        proc.stdout = iter(["Error! Build failed.\n"])
+        proc.returncode = 1
+        proc.wait.return_value = 1
+        mock_popen.return_value = proc
+
+        with mock.patch(
+            "ukm.core.system.privilege_escalation_cmd", return_value=[]
+        ):
+            lines = list(autoinstall("6.9.0"))
+        assert any("errors" in line.lower() for line in lines)
+
+
+class TestDkmsRemoveKernel:
+    @mock.patch("shutil.which", return_value=None)
+    def test_skips_when_dkms_missing(self, _):
+        from ukm.core.dkms import remove_kernel
+
+        lines = list(remove_kernel("6.8.0"))
+        assert lines == []
+
+    @mock.patch("shutil.which", return_value="/usr/sbin/dkms")
+    @mock.patch("subprocess.run")
+    def test_no_modules_for_kernel(self, mock_run, _):
+        from ukm.core.dkms import remove_kernel
+
+        mock_run.return_value = mock.MagicMock(returncode=0, stdout="")
+        lines = list(remove_kernel("6.8.0"))
+        assert any("No DKMS modules" in line for line in lines)
+
+    @mock.patch("shutil.which", return_value="/usr/sbin/dkms")
+    @mock.patch("subprocess.run")
+    def test_removes_modules_successfully(self, mock_run, _):
+        from ukm.core.dkms import remove_kernel
+
+        # First call: status(); second call: dkms remove
+        mock_run.side_effect = [
+            mock.MagicMock(
+                returncode=0, stdout="nvidia/550.0, 6.8.0-45-generic, x86_64: installed\n"
+            ),
+            mock.MagicMock(returncode=0, stdout="", stderr=""),
+        ]
+        with mock.patch("ukm.core.system.privilege_escalation_cmd", return_value=[]):
+            lines = list(remove_kernel("6.8.0-45-generic"))
+        assert any("Removed" in line for line in lines)
+
+    @mock.patch("shutil.which", return_value="/usr/sbin/dkms")
+    @mock.patch("subprocess.run")
+    def test_warns_on_remove_failure(self, mock_run, _):
+        from ukm.core.dkms import remove_kernel
+
+        mock_run.side_effect = [
+            mock.MagicMock(
+                returncode=0, stdout="nvidia/550.0, 6.8.0-45-generic, x86_64: installed\n"
+            ),
+            mock.MagicMock(returncode=1, stdout="", stderr="permission denied"),
+        ]
+        with mock.patch("ukm.core.system.privilege_escalation_cmd", return_value=[]):
+            lines = list(remove_kernel("6.8.0-45-generic"))
+        assert any("⚠" in line for line in lines)

@@ -102,6 +102,107 @@ class TestMainlinePPAProvider:
         assert len(running) == 1
         assert str(running[0].version) == "6.9.0"
 
+    def test_fetch_refresh_writes_cache(self):
+        import tempfile
+        from pathlib import Path
+
+        p = MainlinePPAProvider(make_backend())
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with (
+                mock.patch("ukm.core.providers.mainline_ppa._CACHE_DIR", Path(tmpdir)),
+                mock.patch("ukm.core.providers.mainline_ppa.system_info") as mock_si,
+                mock.patch.object(p, "_fetch_index", return_value=[]) as mock_fi,
+            ):
+                mock_si.return_value.running_kernel = ""
+                mock_si.return_value.arch = "amd64"
+                p.fetch("amd64", refresh=True)
+            mock_fi.assert_called_once_with("amd64")
+
+    def test_fetch_package_urls_parses_debs(self):
+        html = b"""<html><body>
+        <a href="CHECKSUMS">CHECKSUMS</a>
+        <a href="linux-image-6.9.0_amd64.deb">linux-image-6.9.0_amd64.deb</a>
+        <a href="linux-headers-6.9.0_amd64.deb">linux-headers-6.9.0_amd64.deb</a>
+        </body></html>"""
+        checksums_data = b"abc123 linux-image-6.9.0_amd64.deb\n"
+
+        p = MainlinePPAProvider(make_backend())
+        responses = [
+            mock.MagicMock(read=lambda: html, __enter__=lambda s: s,
+                           __exit__=mock.MagicMock(return_value=False)),
+            mock.MagicMock(read=lambda: checksums_data, __enter__=lambda s: s,
+                           __exit__=mock.MagicMock(return_value=False)),
+        ]
+        with mock.patch("urllib.request.urlopen", side_effect=responses):
+            urls, checksums = p._fetch_package_urls("https://example.com/v6.9.0/", "amd64")
+        assert any("linux-image" in u for u in urls)
+
+    def test_entry_to_dict_roundtrip(self):
+        from ukm.core.kernel import KernelEntry, KernelVersion
+        from ukm.core.providers.mainline_ppa import MainlinePPAProvider
+
+        e = KernelEntry(
+            version=KernelVersion("6.9.0"),
+            family=KernelFamily.MAINLINE,
+            provider_id="mainline_ppa",
+            arch="amd64",
+            flavor="generic",
+        )
+        d = MainlinePPAProvider._entry_to_dict(e)
+        e2 = MainlinePPAProvider._dict_to_entry(d, "amd64")
+        assert str(e2.version) == "6.9.0"
+        assert e2.arch == "amd64"
+
+    def test_hold_delegates_to_backend(self):
+        from ukm.core.kernel import KernelEntry, KernelVersion
+
+        # installed_packages must return a match so hold() actually calls backend.hold
+        backend = make_backend(installed=["linux-image-6.9.0-generic"])
+        backend.hold.return_value = (0, "held", "")
+        p = MainlinePPAProvider(backend)
+        entry = KernelEntry(
+            version=KernelVersion("6.9.0"),
+            family=KernelFamily.MAINLINE,
+            provider_id="mainline_ppa",
+            arch="amd64",
+            flavor="generic",
+        )
+        rc, out, err = p.hold(entry)
+        assert rc == 0
+        backend.hold.assert_called_once()
+
+    def test_hold_nothing_installed(self):
+        from ukm.core.kernel import KernelEntry, KernelVersion
+
+        backend = make_backend(installed=[])
+        p = MainlinePPAProvider(backend)
+        entry = KernelEntry(
+            version=KernelVersion("6.9.0"),
+            family=KernelFamily.MAINLINE,
+            provider_id="mainline_ppa",
+            arch="amd64",
+            flavor="generic",
+        )
+        rc, out, err = p.hold(entry)
+        assert rc == 0  # "Nothing to hold."
+        backend.hold.assert_not_called()
+
+    def test_unhold_delegates_to_backend(self):
+        from ukm.core.kernel import KernelEntry, KernelVersion
+
+        backend = make_backend(installed=["linux-image-6.9.0-generic"])
+        backend.unhold.return_value = (0, "unheld", "")
+        p = MainlinePPAProvider(backend)
+        entry = KernelEntry(
+            version=KernelVersion("6.9.0"),
+            family=KernelFamily.MAINLINE,
+            provider_id="mainline_ppa",
+            arch="amd64",
+            flavor="generic",
+        )
+        rc, out, err = p.unhold(entry)
+        assert rc == 0
+
     def test_list_sorted_newest_first(self):
         import json
         import tempfile

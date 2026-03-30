@@ -104,4 +104,5 @@ omit = ["ukm/gui/*", "ukm/qt.py"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts   = "-v --tb=short"
+addopts   = "-v --tb=short --ignore=tests/integration"
+markers   = ["integration: tests that require real package managers (run in CI containers)"]

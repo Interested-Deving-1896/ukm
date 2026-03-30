@@ -38,6 +38,7 @@ from ukm.gui.widgets.gentoo_compile_dialog import GentooCompileDialog
 from ukm.gui.widgets.kernel_view import KernelView
 from ukm.gui.widgets.log_panel import LogPanel
 from ukm.gui.widgets.note_dialog import NoteDialog
+from ukm.gui.widgets.progress_panel import ProgressPanel
 from ukm.qt import (
     QAction,
     QApplication,
@@ -108,6 +109,7 @@ class MainWindow(QMainWindow):
         self._manager = KernelManager()
         self._entries: list[KernelEntry] = []
         self._worker: QThread | None = None
+        self._progress: ProgressPanel | None = None  # set in _setup_ui
 
         self.setWindowTitle(f"ukm — Universal Kernel Manager  v{__version__}")
         self.setMinimumSize(900, 600)
@@ -139,6 +141,11 @@ class MainWindow(QMainWindow):
         left_layout = QVBoxLayout(left_widget)
         left_layout.setContentsMargins(0, 0, 0, 0)
         left_layout.setSpacing(0)
+
+        # Progress panel — shown during install/remove, hidden when idle
+        self._progress = ProgressPanel()
+        left_layout.addWidget(self._progress)
+
         splitter = QSplitter(Qt.Orientation.Vertical)
         left_layout.addWidget(splitter)
         h_splitter.addWidget(left_widget)
@@ -492,16 +499,28 @@ class MainWindow(QMainWindow):
         self._log.append(f"\n{status_msg}\n")
         self.statusBar().showMessage(status_msg)
 
+        if self._progress is not None:
+            self._progress.start(status_msg)
+
         self._worker = _OperationWorker(gen_fn)
         self._worker.line_ready.connect(self._log.append)
+        self._worker.line_ready.connect(self._on_log_line)
         self._worker.finished_ok.connect(self._on_operation_done)
         self._worker.finished_err.connect(self._on_operation_error)
         self._worker.start()
 
     @Slot(str)
+    def _on_log_line(self, line: str) -> None:
+        """Update the progress phase label based on keywords in each log line."""
+        if self._progress is not None:
+            self._progress.update_phase(line)
+
+    @Slot(str)
     def _on_operation_done(self, msg: str) -> None:
         self._log.append(f"\n✓ {msg}\n")
         self.statusBar().showMessage("Ready", 3000)
+        if self._progress is not None:
+            self._progress.stop(success=True)
         self._set_busy(False)
         self._refresh(force=False)
 
@@ -509,6 +528,8 @@ class MainWindow(QMainWindow):
     def _on_operation_error(self, msg: str) -> None:
         self._log.append(f"\n✗ Error: {msg}\n")
         self.statusBar().showMessage("Error — see log", 5000)
+        if self._progress is not None:
+            self._progress.stop(success=False)
         self._set_busy(False)
         QMessageBox.critical(self, "Operation Failed", msg)
 
@@ -518,7 +539,10 @@ class MainWindow(QMainWindow):
 
     def _refresh(self, force: bool = False) -> None:
         self._set_busy(True)
-        self.statusBar().showMessage("Loading kernel list…")
+        msg = "Fetching kernel index…" if force else "Loading kernel list…"
+        self.statusBar().showMessage(msg)
+        if self._progress is not None:
+            self._progress.start(msg)
         worker = _RefreshWorker(self._manager, refresh=force)
         worker.finished.connect(self._on_refresh_done)
         worker.error.connect(self._on_refresh_error)
@@ -535,11 +559,15 @@ class MainWindow(QMainWindow):
         count = len(entries)
         installed = sum(1 for e in entries if e.is_installed)
         self.statusBar().showMessage(f"Ready — {count} kernels ({installed} installed)", 5000)
+        if self._progress is not None:
+            self._progress.stop(success=True)
         self._set_busy(False)
 
     @Slot(str)
     def _on_refresh_error(self, msg: str) -> None:
         self.statusBar().showMessage(f"Refresh error: {msg}", 8000)
+        if self._progress is not None:
+            self._progress.stop(success=False)
         self._set_busy(False)
 
     # ------------------------------------------------------------------

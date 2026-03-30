@@ -15,6 +15,8 @@ optdepends=(
 )
 makedepends=("python-build" "python-installer" "python-hatchling")
 source=("$pkgname-$pkgver.tar.gz::https://github.com/ukm-project/ukm/archive/refs/tags/v$pkgver.tar.gz")
+# Update b2sums after tagging:
+#   curl -L https://github.com/ukm-project/ukm/archive/refs/tags/v0.1.0.tar.gz | b2sum
 b2sums=("SKIP")
 
 build() {
@@ -31,6 +33,10 @@ package() {
         "$pkgdir/usr/lib/systemd/user/ukm-notify.service"
     install -Dm644 share/systemd/ukm-notify.timer \
         "$pkgdir/usr/lib/systemd/user/ukm-notify.timer"
+
+    # Login-time shell snippet (sourced from ~/.bashrc / ~/.zshrc)
+    install -Dm644 share/shell/ukm-login-check.sh \
+        "$pkgdir/usr/share/ukm/shell/ukm-login-check.sh"
 
     # Desktop entry
     install -Dm644 share/applications/ukm.desktop \

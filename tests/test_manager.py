@@ -307,6 +307,57 @@ class TestHoldUnhold:
         assert "not found" in err
 
 
+class TestSearch:
+    def test_search_by_version(self, tmp_path):
+        entries = [make_entry("6.9.0"), make_entry("6.8.0"), make_entry("6.7.0")]
+        provider = _mock_provider(entries)
+        with _mgr_ctx(tmp_path, [provider]):
+            mgr = KernelManager(arch="amd64")
+        results = mgr.search("6.9")
+        assert len(results) == 1
+        assert str(results[0].version) == "6.9.0"
+
+    def test_search_by_family(self, tmp_path):
+        entries = [make_entry("6.9.0"), make_entry("6.8.0")]
+        provider = _mock_provider(entries)
+        with _mgr_ctx(tmp_path, [provider]):
+            mgr = KernelManager(arch="amd64")
+        results = mgr.search("mainline")
+        assert len(results) == 2
+
+    def test_search_by_flavor(self, tmp_path):
+        e1 = make_entry("6.9.0")
+        e1.flavor = "rt"
+        e2 = make_entry("6.8.0")
+        e2.flavor = "generic"
+        provider = _mock_provider([e1, e2])
+        with _mgr_ctx(tmp_path, [provider]):
+            mgr = KernelManager(arch="amd64")
+        results = mgr.search("rt")
+        assert len(results) == 1
+        assert results[0].flavor == "rt"
+
+    def test_search_case_insensitive(self, tmp_path):
+        provider = _mock_provider([make_entry("6.9.0")])
+        with _mgr_ctx(tmp_path, [provider]):
+            mgr = KernelManager(arch="amd64")
+        assert len(mgr.search("MAINLINE")) == 1
+        assert len(mgr.search("Mainline")) == 1
+
+    def test_search_no_results(self, tmp_path):
+        provider = _mock_provider([make_entry("6.9.0")])
+        with _mgr_ctx(tmp_path, [provider]):
+            mgr = KernelManager(arch="amd64")
+        assert mgr.search("zzznomatch") == []
+
+    def test_search_passes_refresh(self, tmp_path):
+        provider = _mock_provider([make_entry("6.9.0")])
+        with _mgr_ctx(tmp_path, [provider]):
+            mgr = KernelManager(arch="amd64")
+        mgr.search("6.9", refresh=True)
+        provider.fetch.assert_called_with("amd64", refresh=True)
+
+
 class TestRemoveOld:
     def test_removes_old_kernels(self, tmp_path):
         entries = [
