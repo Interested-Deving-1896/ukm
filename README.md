@@ -65,6 +65,10 @@ ukm list --installed              # installed only
 ukm list --json                   # machine-readable output
 ukm list --refresh                # force re-fetch index
 
+ukm search 6.9                    # search by version, flavor, family, or provider
+ukm search rt                     # find all real-time kernels
+ukm search xanmod --json          # machine-readable search results
+
 ukm install 6.9.0                 # install by version
 ukm install 6.9.0 --flavor=rt     # install specific flavor
 ukm install 6.9.0 --provider=xanmod
@@ -82,6 +86,16 @@ ukm remove-old --keep=2           # keep 2 most recent
 
 ukm providers                     # list available providers
 ukm info                          # system info (distro, arch, running kernel)
+
+# Notifications
+ukm notify                        # check now and send desktop notification if newer kernel found
+ukm notify-enable                 # install systemd user timer (checks every 12 h) — recommended
+ukm notify-disable                # stop and remove the timer
+
+# Login-time check (for non-systemd users or as a fallback)
+ukm notify-shell-install          # add a one-liner to ~/.bashrc and ~/.zshrc
+ukm notify-shell-install --shell=zsh  # only modify ~/.zshrc
+ukm notify-shell-uninstall        # remove the snippet
 
 # Gentoo source compilation
 ukm gentoo sources                # list installed source trees

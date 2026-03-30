@@ -1,0 +1,165 @@
+name: Integration Tests
+
+# Runs against real package managers in purpose-built containers.
+# Triggered on push/PR to main, and manually.
+#
+# Each job installs ukm into a real distro container and exercises the
+# CLI against the system's actual package manager. These tests are
+# intentionally narrow — they verify that the provider/backend wiring
+# works end-to-end, not that every kernel version is correct.
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # apt / dpkg — Ubuntu 24.04 (Noble)
+  # ---------------------------------------------------------------------------
+  integration-apt:
+    name: Integration — apt (Ubuntu 24.04)
+    runs-on: ubuntu-latest
+    container:
+      image: ubuntu:24.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          apt-get update -q
+          apt-get install -y --no-install-recommends \
+            python3 python3-pip python3-venv \
+            dpkg apt curl gpg \
+            libnotify-bin
+
+      - name: Install ukm
+        run: pip3 install --break-system-packages -e ".[dev]"
+
+      - name: ukm info
+        run: ukm info
+
+      - name: ukm providers
+        run: ukm providers
+
+      - name: ukm list --family=distro
+        run: ukm list --family=distro --json
+
+      - name: ukm search generic
+        run: ukm search generic --json
+
+      - name: ukm cpu
+        run: ukm cpu
+
+      - name: ukm dkms
+        run: ukm dkms
+
+      - name: Run integration test suite
+        run: pytest tests/integration/ -v --tb=short
+        continue-on-error: true  # integration tests may need root; best-effort
+
+  # ---------------------------------------------------------------------------
+  # pacman — Arch Linux
+  # ---------------------------------------------------------------------------
+  integration-pacman:
+    name: Integration — pacman (Arch Linux)
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          pacman -Sy --noconfirm python python-pip
+
+      - name: Install ukm
+        run: pip install --break-system-packages -e ".[dev]"
+
+      - name: ukm info
+        run: ukm info
+
+      - name: ukm providers
+        run: ukm providers
+
+      - name: ukm list --family=distro
+        run: ukm list --family=distro --json
+
+      - name: ukm search linux
+        run: ukm search linux --json
+
+      - name: Run integration test suite
+        run: pytest tests/integration/ -v --tb=short -k "pacman or arch"
+        continue-on-error: true
+
+  # ---------------------------------------------------------------------------
+  # dnf — Fedora 40
+  # ---------------------------------------------------------------------------
+  integration-dnf:
+    name: Integration — dnf (Fedora 40)
+    runs-on: ubuntu-latest
+    container:
+      image: fedora:40
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: dnf install -y python3 python3-pip
+
+      - name: Install ukm
+        run: pip3 install -e ".[dev]"
+
+      - name: ukm info
+        run: ukm info
+
+      - name: ukm providers
+        run: ukm providers
+
+      - name: ukm list --family=distro
+        run: ukm list --family=distro --json
+
+      - name: ukm search kernel
+        run: ukm search kernel --json
+
+      - name: Run integration test suite
+        run: pytest tests/integration/ -v --tb=short -k "dnf or fedora"
+        continue-on-error: true
+
+  # ---------------------------------------------------------------------------
+  # apk — Alpine Linux
+  # ---------------------------------------------------------------------------
+  integration-apk:
+    name: Integration — apk (Alpine Linux)
+    runs-on: ubuntu-latest
+    container:
+      image: alpine:latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: apk add --no-cache python3 py3-pip
+
+      - name: Install ukm
+        run: pip3 install --break-system-packages -e ".[dev]"
+
+      - name: ukm info
+        run: ukm info
+
+      - name: ukm providers
+        run: ukm providers
+
+      - name: ukm list --family=distro
+        run: ukm list --family=distro --json
+
+      - name: ukm search linux
+        run: ukm search linux --json
+
+      - name: Run integration test suite
+        run: pytest tests/integration/ -v --tb=short -k "apk or alpine"
+        continue-on-error: true

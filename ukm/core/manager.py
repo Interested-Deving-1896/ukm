@@ -64,6 +64,21 @@ class KernelManager:
     def list_installed(self) -> list[KernelEntry]:
         return [e for e in self.list_all() if e.is_installed]
 
+    def search(self, pattern: str, refresh: bool = False) -> list[KernelEntry]:
+        """
+        Return kernels whose version string, flavor, family, or provider ID
+        contains *pattern* (case-insensitive substring match).
+        """
+        needle = pattern.lower()
+        return [
+            e
+            for e in self.list_all(refresh=refresh)
+            if needle in str(e.version).lower()
+            or needle in e.flavor.lower()
+            or needle in e.family.value.lower()
+            or needle in e.provider_id.lower()
+        ]
+
     def running_kernel(self) -> KernelEntry | None:
         for e in self.list_all():
             if e.is_running:

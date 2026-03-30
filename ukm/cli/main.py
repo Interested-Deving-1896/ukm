@@ -3,6 +3,7 @@ ukm — Universal Kernel Manager CLI
 
 Usage:
   ukm list [--family=<family>] [--installed] [--json] [--refresh]
+  ukm search <pattern> [--json] [--refresh]
   ukm install <version> [--provider=<id>] [--flavor=<flavor>] [--yes]
   ukm remove  <version> [--provider=<id>] [--purge] [--yes]
   ukm hold    <version> [--provider=<id>]
@@ -14,9 +15,11 @@ Usage:
   ukm notify [--provider=<id>]
   ukm notify-enable
   ukm notify-disable
+  ukm notify-shell-install [--shell=<shell>]
+  ukm notify-shell-uninstall [--shell=<shell>]
   ukm cpu
-  ukm dkms
-  ukm changelog <version> [--provider=<id>] [--flavor=<flavor>]
+  ukm dkms [--json]
+  ukm changelog <version> [--provider=<id>] [--flavor=<flavor>] [--json]
   ukm gentoo compile <src-path> [--genkernel] [--make] [--jobs=<n>]
   ukm gentoo configure <src-path> [--target=<target>]
   ukm gentoo sources
@@ -40,11 +43,13 @@ Options:
   --make               Use raw make for compilation.
   --jobs=<n>           Parallel make jobs [default: auto].
   --target=<target>    Kernel config target [default: menuconfig].
+  --shell=<shell>      Shell rc file to modify: bash, zsh, or path [default: auto].
 """
 
 from __future__ import annotations
 
 import sys
+from pathlib import Path
 
 from ukm import __version__
 from ukm.cli import output as out
@@ -83,6 +88,10 @@ def main(argv: list[str] | None = None) -> int:
     if args["list"]:
         return cmd_list(mgr, args)
 
+    # ------------------------------------------------------------- search
+    if args["search"]:
+        return cmd_search(mgr, args)
+
     # ------------------------------------------------------------ install
     if args["install"]:
         return cmd_install(mgr, args)
@@ -116,6 +125,12 @@ def main(argv: list[str] | None = None) -> int:
 
     if args["notify-disable"]:
         return cmd_notify_disable()
+
+    if args["notify-shell-install"]:
+        return cmd_notify_shell_install(args)
+
+    if args["notify-shell-uninstall"]:
+        return cmd_notify_shell_uninstall(args)
 
     # --------------------------------------------------------------- cpu
     if args["cpu"]:
@@ -247,6 +262,32 @@ def cmd_list(mgr: KernelManager, args: dict) -> int:
             ],
         )
         out.info(f"\n  {len(entries)} kernel(s) listed.")
+    return 0
+
+
+def cmd_search(mgr: KernelManager, args: dict) -> int:
+    pattern = args["<pattern>"]
+    refresh = bool(args.get("--refresh"))
+
+    entries = mgr.search(pattern, refresh=refresh)
+
+    rows = [_entry_to_row(e) for e in entries]
+
+    if out._json_mode:
+        out.print_json(rows)
+    else:
+        out.print_table(
+            rows,
+            [
+                ("version", "Version"),
+                ("flavor", "Flavor"),
+                ("family", "Family"),
+                ("arch", "Arch"),
+                ("status", "Status"),
+                ("provider", "Provider"),
+            ],
+        )
+        out.info(f"\n  {len(entries)} kernel(s) matched '{pattern}'.")
     return 0
 
 
@@ -478,7 +519,6 @@ def cmd_notify_enable() -> int:
     """Install and enable the systemd user timer for background notifications."""
     import shutil
     import subprocess
-    from pathlib import Path
 
     systemd_user_dir = Path.home() / ".config" / "systemd" / "user"
     systemd_user_dir.mkdir(parents=True, exist_ok=True)
@@ -509,7 +549,6 @@ def cmd_notify_disable() -> int:
     """Disable and remove the systemd user timer."""
     import shutil
     import subprocess
-    from pathlib import Path
 
     if shutil.which("systemctl"):
         subprocess.run(["systemctl", "--user", "disable", "--now", "ukm-notify.timer"], check=False)
@@ -525,6 +564,108 @@ def cmd_notify_disable() -> int:
         subprocess.run(["systemctl", "--user", "daemon-reload"], check=False)
 
     out.success("ukm notifications disabled.")
+    return 0
+
+
+def _shell_rc_files(shell_hint: str | None) -> list:
+    """
+    Return the list of shell rc files to modify.
+    shell_hint can be 'bash', 'zsh', 'fish', or an explicit path.
+    When None/'auto', all present rc files are returned.
+    """
+    home = Path.home()
+    candidates = {
+        "bash": [home / ".bashrc", home / ".bash_profile"],
+        "zsh": [home / ".zshrc"],
+        "fish": [home / ".config" / "fish" / "config.fish"],
+    }
+
+    if shell_hint and shell_hint not in ("auto", ""):
+        if shell_hint in candidates:
+            return [f for f in candidates[shell_hint] if f.exists() or f == candidates[shell_hint][0]]
+        # Treat as explicit path
+        return [Path(shell_hint)]
+
+    # Auto: return all rc files that exist
+    result = []
+    for files in candidates.values():
+        result.extend(f for f in files if f.exists())
+    return result
+
+
+_SHELL_MARKER_BEGIN = "# >>> ukm login-check begin <<<"
+_SHELL_MARKER_END = "# >>> ukm login-check end <<<"
+
+
+def _snippet_path() -> Path:
+    """Return the path to the bundled ukm-login-check.sh snippet."""
+    return Path(__file__).parent.parent.parent / "share" / "shell" / "ukm-login-check.sh"
+
+
+def cmd_notify_shell_install(args: dict) -> int:
+    """
+    Append a login-time kernel update check snippet to the user's shell rc file(s).
+    Uses a begin/end marker so it can be cleanly removed later.
+    """
+    shell_hint = args.get("--shell") or "auto"
+    snippet_src = _snippet_path()
+
+    if not snippet_src.exists():
+        out.error(f"Snippet file not found: {snippet_src}")
+        return 1
+
+    rc_files = _shell_rc_files(shell_hint)
+    if not rc_files:
+        out.warn("No shell rc files found. Pass --shell=bash or --shell=zsh explicitly.")
+        return 1
+
+    snippet_line = f'. "{snippet_src}"'
+    block = f"\n{_SHELL_MARKER_BEGIN}\n{snippet_line}\n{_SHELL_MARKER_END}\n"
+
+    installed_any = False
+    for rc in rc_files:
+        content = rc.read_text() if rc.exists() else ""
+        if _SHELL_MARKER_BEGIN in content:
+            out.info(f"  {rc}: already installed, skipping.")
+            continue
+        rc.parent.mkdir(parents=True, exist_ok=True)
+        with rc.open("a") as f:
+            f.write(block)
+        out.success(f"  Installed login check in {rc}")
+        installed_any = True
+
+    if installed_any:
+        out.info("  Restart your shell or run: source ~/.bashrc")
+        out.info("  To remove: ukm notify-shell-uninstall")
+    return 0
+
+
+def cmd_notify_shell_uninstall(args: dict) -> int:
+    """Remove the ukm login-check snippet from shell rc file(s)."""
+    shell_hint = args.get("--shell") or "auto"
+    rc_files = _shell_rc_files(shell_hint)
+
+    removed_any = False
+    for rc in rc_files:
+        if not rc.exists():
+            continue
+        content = rc.read_text()
+        if _SHELL_MARKER_BEGIN not in content:
+            continue
+        # Strip the block between markers (inclusive)
+        import re
+        new_content = re.sub(
+            rf"\n?{re.escape(_SHELL_MARKER_BEGIN)}.*?{re.escape(_SHELL_MARKER_END)}\n?",
+            "",
+            content,
+            flags=re.DOTALL,
+        )
+        rc.write_text(new_content)
+        out.success(f"  Removed login check from {rc}")
+        removed_any = True
+
+    if not removed_any:
+        out.info("No ukm login-check snippet found in any shell rc file.")
     return 0
 
 
