@@ -13,15 +13,14 @@ The provider detects the file type and delegates to the appropriate backend.
 from __future__ import annotations
 
 import re
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Iterator
 
 from ukm.core.kernel import KernelEntry, KernelFamily, KernelStatus, KernelVersion
 from ukm.core.providers.base import KernelProvider
 
 
 class LocalFileProvider(KernelProvider):
-
     @property
     def id(self) -> str:
         return "local_file"

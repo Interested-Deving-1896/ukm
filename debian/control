@@ -1,0 +1,49 @@
+Source: ukm
+Section: admin
+Priority: optional
+Maintainer: ukm contributors <ukm@example.com>
+Build-Depends:
+ debhelper-compat (= 13),
+ dh-python,
+ python3-all,
+ python3-setuptools,
+ python3-hatchling,
+Standards-Version: 4.6.2
+Homepage: https://github.com/ukm-project/ukm
+Rules-Requires-Root: no
+
+Package: ukm
+Architecture: all
+Depends:
+ ${python3:Depends},
+ ${misc:Depends},
+ python3 (>= 3.11),
+ python3-docopt,
+Recommends:
+ python3-pyside6 | python3-pyqt6,
+ libnotify-bin,
+ aria2,
+Suggests:
+ ukm-gui,
+Description: Universal Kernel Manager — CLI
+ ukm is a distro-agnostic, architecture-agnostic Linux kernel manager.
+ It can install, remove, hold, and manage kernels from the Ubuntu Mainline
+ PPA, XanMod, Liquorix, distro-native repositories, Gentoo Portage, and
+ local package files.
+ .
+ Supports apt, pacman, dnf, zypper, apk, and portage package managers,
+ covering Debian, Ubuntu, Arch, Fedora, openSUSE, Alpine, Gentoo, and
+ their derivatives.
+
+Package: ukm-gui
+Architecture: all
+Depends:
+ ukm (= ${binary:Version}),
+ ${python3:Depends},
+ ${misc:Depends},
+ python3-pyside6 | python3-pyqt6,
+Description: Universal Kernel Manager — Qt GUI
+ Graphical front-end for ukm. Provides a tabbed window with one tab per
+ kernel family (Ubuntu Mainline PPA, XanMod, Liquorix, distro-native,
+ Gentoo, local), a unified filtered list, live install/remove log panel,
+ and a Gentoo source compilation dialog.

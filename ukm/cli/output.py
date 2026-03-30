@@ -15,14 +15,14 @@ from typing import Any
 # Detect colour support
 _COLOUR = sys.stdout.isatty() and os.environ.get("NO_COLOR", "") == ""
 
-_RESET  = "\033[0m"  if _COLOUR else ""
-_BOLD   = "\033[1m"  if _COLOUR else ""
-_DIM    = "\033[2m"  if _COLOUR else ""
-_GREEN  = "\033[32m" if _COLOUR else ""
+_RESET = "\033[0m" if _COLOUR else ""
+_BOLD = "\033[1m" if _COLOUR else ""
+_DIM = "\033[2m" if _COLOUR else ""
+_GREEN = "\033[32m" if _COLOUR else ""
 _YELLOW = "\033[33m" if _COLOUR else ""
-_CYAN   = "\033[36m" if _COLOUR else ""
-_RED    = "\033[31m" if _COLOUR else ""
-_BLUE   = "\033[34m" if _COLOUR else ""
+_CYAN = "\033[36m" if _COLOUR else ""
+_RED = "\033[31m" if _COLOUR else ""
+_BLUE = "\033[34m" if _COLOUR else ""
 
 _quiet = False
 _json_mode = False
@@ -92,10 +92,7 @@ def print_table(
             widths[key] = max(widths[key], len(str(row.get(key, ""))))
 
     # Header
-    header = "  ".join(
-        f"{_BOLD}{header:<{widths[key]}}{_RESET}"
-        for key, header in columns
-    )
+    header = "  ".join(f"{_BOLD}{header:<{widths[key]}}{_RESET}" for key, header in columns)
     sep = "  ".join("-" * widths[key] for key, _ in columns)
     print(header)
     print(sep)
@@ -103,14 +100,18 @@ def print_table(
     # Rows
     for row in rows:
         is_running = row.get("status", "") == "running"
-        colour = _GREEN if is_running else (
-            _CYAN if row.get("status", "") == "installed" else
-            _YELLOW if row.get("held") else ""
+        colour = (
+            _GREEN
+            if is_running
+            else (
+                _CYAN
+                if row.get("status", "") == "installed"
+                else _YELLOW
+                if row.get("held")
+                else ""
+            )
         )
-        line = "  ".join(
-            f"{str(row.get(key, '')):<{widths[key]}}"
-            for key, _ in columns
-        )
+        line = "  ".join(f"{str(row.get(key, '')):<{widths[key]}}" for key, _ in columns)
         if colour:
             print(f"{colour}{line}{_RESET}")
         else:

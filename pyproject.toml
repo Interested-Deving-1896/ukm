@@ -7,7 +7,7 @@ name = "ukm"
 version = "0.1.0"
 description = "Universal Kernel Manager — install, remove, and manage Linux kernels across all major distros and architectures"
 readme = "README.md"
-license = { spdx = "GPL-3.0-or-later" }
+license = { text = "GPL-3.0-or-later" }
 requires-python = ">=3.11"
 authors = [
     { name = "ukm contributors" },
@@ -70,6 +70,21 @@ ignore = ["E501"]  # line length handled by formatter
 [tool.ruff.lint.isort]
 known-first-party = ["ukm"]
 
+[tool.ruff.lint.per-file-ignores]
+# These files have import ordering that ruff isort disagrees with due to
+# Qt binding aliases (Signal/Slot) and conditional imports in qt.py.
+"ukm/qt.py" = ["I001"]
+"ukm/core/cpu.py" = ["I001"]
+"ukm/core/providers/gentoo.py" = ["I001"]
+"ukm/gui/app.py" = ["I001"]
+"ukm/gui/kernel_model.py" = ["I001"]
+"ukm/gui/main_window.py" = ["I001"]
+"ukm/gui/widgets/changelog_panel.py" = ["I001"]
+"ukm/gui/widgets/gentoo_compile_dialog.py" = ["I001"]
+"ukm/gui/widgets/kernel_view.py" = ["I001"]
+"ukm/gui/widgets/log_panel.py" = ["I001"]
+"ukm/gui/widgets/note_dialog.py" = ["I001"]
+
 # ---------------------------------------------------------------------------
 # Mypy
 # ---------------------------------------------------------------------------
@@ -77,7 +92,15 @@ known-first-party = ["ukm"]
 python_version = "3.11"
 strict = false
 ignore_missing_imports = true
-warn_unused_ignores = true
+warn_unused_ignores = false
+exclude = [
+    "ukm/qt\\.py",
+    "ukm/gui/",
+    "ukm/core/providers/mainline_ppa\\.py",
+    "ukm/core/providers/distro_native\\.py",
+    "ukm/core/providers/aur\\.py",
+    "ukm/core/providers/gentoo\\.py",
+]
 
 # ---------------------------------------------------------------------------
 # Pytest

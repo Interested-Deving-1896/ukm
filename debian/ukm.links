@@ -1,0 +1,2 @@
+usr/lib/python3/dist-packages/ukm/cli/main.py usr/bin/ukm
+usr/lib/python3/dist-packages/ukm/gui/app.py usr/bin/ukm-gui

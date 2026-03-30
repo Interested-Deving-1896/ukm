@@ -27,37 +27,49 @@ Layout:
 
 from __future__ import annotations
 
-from ukm.qt import (
-    Qt, QMainWindow, QWidget, QVBoxLayout, QSplitter,
-    QTabWidget, QToolBar, QAction, QStatusBar, QLabel,
-    QMessageBox, QFileDialog, QThread, Signal, Slot,
-    QSizePolicy, QApplication,
-)
 from ukm import __version__
+from ukm.core.backends.portage import PortageBackend
 from ukm.core.kernel import KernelEntry, KernelFamily
 from ukm.core.manager import KernelManager
-from ukm.core.system import system_info
-from ukm.core.backends.portage import PortageBackend
 from ukm.core.providers.gentoo import GentooProvider
-from ukm.gui.kernel_model import KernelTableModel
+from ukm.core.system import system_info
+from ukm.gui.widgets.changelog_panel import ChangelogPanel
+from ukm.gui.widgets.gentoo_compile_dialog import GentooCompileDialog
 from ukm.gui.widgets.kernel_view import KernelView
 from ukm.gui.widgets.log_panel import LogPanel
 from ukm.gui.widgets.note_dialog import NoteDialog
-from ukm.gui.widgets.gentoo_compile_dialog import GentooCompileDialog
+from ukm.qt import (
+    QAction,
+    QApplication,
+    QFileDialog,
+    QLabel,
+    QMainWindow,
+    QMessageBox,
+    QSplitter,
+    QTabWidget,
+    QThread,
+    QToolBar,
+    QVBoxLayout,
+    QWidget,
+    Qt,
+    Signal,
+    Slot,
+)
 
 
 # ---------------------------------------------------------------------------
 # Background worker for long-running operations
 # ---------------------------------------------------------------------------
 
+
 class _OperationWorker(QThread):
-    line_ready   = Signal(str)
-    finished_ok  = Signal(str)   # success message
-    finished_err = Signal(str)   # error message
+    line_ready = Signal(str)
+    finished_ok = Signal(str)  # success message
+    finished_err = Signal(str)  # error message
 
     def __init__(self, gen_fn) -> None:
         super().__init__()
-        self._gen_fn = gen_fn   # callable that returns an iterator of log lines
+        self._gen_fn = gen_fn  # callable that returns an iterator of log lines
 
     def run(self) -> None:
         try:
@@ -69,8 +81,8 @@ class _OperationWorker(QThread):
 
 
 class _RefreshWorker(QThread):
-    finished = Signal(list)   # list[KernelEntry]
-    error    = Signal(str)
+    finished = Signal(list)  # list[KernelEntry]
+    error = Signal(str)
 
     def __init__(self, manager: KernelManager, refresh: bool = False) -> None:
         super().__init__()
@@ -89,8 +101,8 @@ class _RefreshWorker(QThread):
 # Main window
 # ---------------------------------------------------------------------------
 
-class MainWindow(QMainWindow):
 
+class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self._manager = KernelManager()
@@ -118,9 +130,26 @@ class MainWindow(QMainWindow):
         root.setContentsMargins(4, 4, 4, 4)
         root.setSpacing(0)
 
-        # Splitter: tabs on top, log panel on bottom
+        # Outer horizontal splitter: [tabs+log | changelog panel]
+        h_splitter = QSplitter(Qt.Orientation.Horizontal)
+        root.addWidget(h_splitter)
+
+        # Left side: vertical splitter (tabs on top, log on bottom)
+        left_widget = QWidget()
+        left_layout = QVBoxLayout(left_widget)
+        left_layout.setContentsMargins(0, 0, 0, 0)
+        left_layout.setSpacing(0)
         splitter = QSplitter(Qt.Orientation.Vertical)
-        root.addWidget(splitter)
+        left_layout.addWidget(splitter)
+        h_splitter.addWidget(left_widget)
+
+        # Changelog panel on the right
+        self._changelog = ChangelogPanel()
+        self._changelog.setMinimumWidth(260)
+        self._changelog.setMaximumWidth(480)
+        h_splitter.addWidget(self._changelog)
+        h_splitter.setStretchFactor(0, 3)
+        h_splitter.setStretchFactor(1, 1)
 
         # Tab widget
         self._tabs = QTabWidget()
@@ -135,12 +164,20 @@ class MainWindow(QMainWindow):
         # Per-family tabs
         self._family_views: dict[str, KernelView] = {}
         tab_families = [
-            (KernelFamily.MAINLINE,  "Mainline PPA"),
-            (KernelFamily.XANMOD,    "XanMod"),
-            (KernelFamily.LIQUORIX,  "Liquorix"),
-            (KernelFamily.DISTRO,    "Distro"),
-            (KernelFamily.LOCAL,     "Local"),
+            (KernelFamily.MAINLINE, "Mainline PPA"),
+            (KernelFamily.XANMOD, "XanMod"),
+            (KernelFamily.LIQUORIX, "Liquorix"),
+            (KernelFamily.DISTRO, "Distro"),
+            (KernelFamily.LOCAL, "Local"),
         ]
+        # AUR tab — shown on Arch systems; reuses DISTRO family filtered by provider
+        from ukm.core.system import PackageManagerKind
+
+        if system_info().package_manager == PackageManagerKind.PACMAN:
+            aur_view = KernelView(family_filter="")
+            self._tabs.addTab(aur_view, "AUR")
+            self._aur_view = aur_view
+            self._connect_view(aur_view)
         for family, label in tab_families:
             view = KernelView(family_filter=family.value)
             self._tabs.addTab(view, label)
@@ -149,11 +186,13 @@ class MainWindow(QMainWindow):
 
         # Gentoo tab — only if portage backend
         from ukm.core.backends import get_backend
+
         if isinstance(get_backend(), PortageBackend):
             gentoo_view = KernelView(family_filter=KernelFamily.GENTOO.value)
             self._tabs.insertTab(
                 self._tabs.count() - 1,  # before Local
-                gentoo_view, "Gentoo"
+                gentoo_view,
+                "Gentoo",
             )
             self._family_views[KernelFamily.GENTOO.value] = gentoo_view
             self._connect_view(gentoo_view)
@@ -213,6 +252,7 @@ class MainWindow(QMainWindow):
 
         # Gentoo compile button — only shown on Gentoo
         from ukm.core.backends import get_backend
+
         if isinstance(get_backend(), PortageBackend):
             tb.addSeparator()
             self._act_compile = QAction("⚙  Compile…", self)
@@ -223,12 +263,20 @@ class MainWindow(QMainWindow):
     def _setup_statusbar(self) -> None:
         sb = self.statusBar()
         info = system_info()
+        from ukm.core import dkms
+
         self._status_distro = QLabel(f"  {info.distro.name}")
-        self._status_arch   = QLabel(f"  {info.arch}")
+        self._status_arch = QLabel(f"  {info.arch}")
         self._status_kernel = QLabel(f"  Running: {info.running_kernel}")
-        self._status_pm     = QLabel(f"  {info.package_manager.value}")
-        for lbl in (self._status_distro, self._status_arch,
-                    self._status_kernel, self._status_pm):
+        self._status_pm = QLabel(f"  {info.package_manager.value}")
+        self._status_dkms = QLabel(f"  DKMS: {dkms.status_summary()}")
+        for lbl in (
+            self._status_distro,
+            self._status_arch,
+            self._status_kernel,
+            self._status_pm,
+            self._status_dkms,
+        ):
             sb.addPermanentWidget(lbl)
 
     # ------------------------------------------------------------------
@@ -242,10 +290,21 @@ class MainWindow(QMainWindow):
         view.unhold_requested.connect(self._do_unhold)
         view.note_requested.connect(self._do_note)
         view.refresh_requested.connect(lambda: self._refresh(force=True))
+        # Wire table selection → changelog panel
+        view._table.selectionModel().currentRowChanged.connect(
+            lambda cur, _prev: self._on_selection_changed(view)
+        )
 
     # ------------------------------------------------------------------
     # Toolbar action handlers
     # ------------------------------------------------------------------
+
+    def _on_selection_changed(self, view: KernelView) -> None:
+        entry = view.selected_entry()
+        if entry:
+            self._changelog.show_entry(entry)
+        else:
+            self._changelog.clear()
 
     def _on_install(self) -> None:
         entry = self._current_view().selected_entry()
@@ -269,7 +328,8 @@ class MainWindow(QMainWindow):
 
     def _on_remove_old(self) -> None:
         reply = QMessageBox.question(
-            self, "Remove Old Kernels",
+            self,
+            "Remove Old Kernels",
             "Remove all installed kernels except the running one and the most recent?\n"
             "Locked kernels will be preserved.",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
@@ -279,22 +339,22 @@ class MainWindow(QMainWindow):
 
     def _on_install_local(self) -> None:
         path, _ = QFileDialog.getOpenFileName(
-            self, "Select kernel package",
+            self,
+            "Select kernel package",
             "",
             "Packages (*.deb *.rpm *.pkg.tar.* *.apk);;All files (*)",
         )
         if not path:
             return
-        from ukm.core.providers.local_file import LocalFileProvider
         from ukm.core.backends import get_backend
+        from ukm.core.providers.local_file import LocalFileProvider
+
         provider = LocalFileProvider(get_backend())
         entry = provider.entry_from_path(path, system_info().arch)
         self._do_install(entry)
 
     def _on_gentoo_compile(self) -> None:
-        provider = next(
-            (p for p in self._manager.providers if isinstance(p, GentooProvider)), None
-        )
+        provider = next((p for p in self._manager.providers if isinstance(p, GentooProvider)), None)
         if provider is None:
             QMessageBox.warning(self, "Gentoo", "Gentoo provider not available.")
             return
@@ -308,39 +368,40 @@ class MainWindow(QMainWindow):
     def _do_install(self, entry: KernelEntry) -> None:
         if entry.is_installed:
             QMessageBox.information(
-                self, "Already Installed",
-                f"Kernel {entry.display_name} is already installed."
+                self, "Already Installed", f"Kernel {entry.display_name} is already installed."
             )
             return
         reply = QMessageBox.question(
-            self, "Install Kernel",
+            self,
+            "Install Kernel",
             f"Install <b>{entry.display_name}</b> from <i>{entry.provider_id}</i>?",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
         if reply == QMessageBox.StandardButton.Yes:
             self._run_operation(
-                lambda: self._manager.install(entry),
-                f"Installing {entry.display_name}…"
+                lambda: self._manager.install(entry), f"Installing {entry.display_name}…"
             )
 
     def _do_remove(self, entry: KernelEntry) -> None:
         if entry.is_running:
-            QMessageBox.warning(self, "Cannot Remove",
-                                "Cannot remove the currently running kernel.")
+            QMessageBox.warning(
+                self, "Cannot Remove", "Cannot remove the currently running kernel."
+            )
             return
         if entry.held:
-            QMessageBox.warning(self, "Kernel Locked",
-                                f"{entry.display_name} is locked. Unhold it first.")
+            QMessageBox.warning(
+                self, "Kernel Locked", f"{entry.display_name} is locked. Unhold it first."
+            )
             return
         reply = QMessageBox.question(
-            self, "Remove Kernel",
+            self,
+            "Remove Kernel",
             f"Remove <b>{entry.display_name}</b>?",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
         if reply == QMessageBox.StandardButton.Yes:
             self._run_operation(
-                lambda: self._manager.remove(entry),
-                f"Removing {entry.display_name}…"
+                lambda: self._manager.remove(entry), f"Removing {entry.display_name}…"
             )
 
     def _do_hold(self, entry: KernelEntry) -> None:
@@ -429,9 +490,7 @@ class MainWindow(QMainWindow):
             view.set_entries([e for e in entries if e.family.value == family_val])
         count = len(entries)
         installed = sum(1 for e in entries if e.is_installed)
-        self.statusBar().showMessage(
-            f"Ready — {count} kernels ({installed} installed)", 5000
-        )
+        self.statusBar().showMessage(f"Ready — {count} kernels ({installed} installed)", 5000)
         self._set_busy(False)
 
     @Slot(str)
@@ -450,9 +509,15 @@ class MainWindow(QMainWindow):
         return self._all_view
 
     def _set_busy(self, busy: bool) -> None:
-        for action in (self._act_refresh, self._act_install, self._act_remove,
-                       self._act_hold, self._act_unhold, self._act_remove_old,
-                       self._act_local):
+        for action in (
+            self._act_refresh,
+            self._act_install,
+            self._act_remove,
+            self._act_hold,
+            self._act_unhold,
+            self._act_remove_old,
+            self._act_local,
+        ):
             action.setEnabled(not busy)
         if busy:
             QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)

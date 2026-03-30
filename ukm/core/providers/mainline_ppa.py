@@ -14,8 +14,8 @@ import json
 import re
 import tempfile
 import urllib.request
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Iterator
 
 from ukm.core.kernel import KernelEntry, KernelFamily, KernelStatus, KernelVersion
 from ukm.core.providers.base import KernelProvider
@@ -32,7 +32,6 @@ _PPA_ARCHES = ["amd64", "arm64", "armhf", "ppc64el", "s390x", "i386"]
 
 
 class MainlinePPAProvider(KernelProvider):
-
     @property
     def id(self) -> str:
         return "mainline_ppa"
@@ -52,6 +51,7 @@ class MainlinePPAProvider(KernelProvider):
     def is_available(self) -> bool:
         # Requires dpkg (Debian-family) and network access
         import shutil
+
         return bool(shutil.which("dpkg"))
 
     def availability_reason(self) -> str:
@@ -70,19 +70,17 @@ class MainlinePPAProvider(KernelProvider):
         index_cache = _CACHE_DIR / "index.json"
 
         if refresh or not index_cache.exists():
-            entries = self._fetch_index(arch)
-            index_cache.write_text(json.dumps(
-                [self._entry_to_dict(e) for e in entries], indent=2
-            ))
+            result = self._fetch_index(arch)
+            index_cache.write_text(json.dumps([self._entry_to_dict(e) for e in result], indent=2))
         else:
             raw = json.loads(index_cache.read_text())
-            entries = [self._dict_to_entry(d, arch) for d in raw]
+            result = [self._dict_to_entry(d, arch) for d in raw]
 
         # Overlay installed/running status
         installed = self._get_installed_versions()
         running = system_info().running_kernel
 
-        for entry in entries:
+        for entry in result:
             ver_str = str(entry.version)
             if any(ver_str in pkg for pkg in installed):
                 entry.status = KernelStatus.INSTALLED
@@ -92,7 +90,7 @@ class MainlinePPAProvider(KernelProvider):
                 entry.held = True
                 entry.status = KernelStatus.HELD
 
-        return sorted(entries, key=lambda e: e.version, reverse=True)
+        return sorted(result, key=lambda e: e.version, reverse=True)
 
     # ------------------------------------------------------------------
     # install()
@@ -132,24 +130,24 @@ class MainlinePPAProvider(KernelProvider):
                             f"  expected: {expected}\n"
                             f"  got:      {actual}"
                         )
-                    yield f"  ✓ checksum OK\n"
+                    yield "  ✓ checksum OK\n"
                 debs.append(dest)
 
             yield "Installing packages...\n"
-            for line in self._backend.stream(
-                self._backend._run.__func__  # use stream() not _run()
-                if False else [],            # placeholder — see below
-            ):
-                yield line
+            from ukm.core.system import privilege_escalation_cmd
 
-            # Actually install
-            rc, out, err = self._backend.install_local([str(d) for d in debs])
-            if out:
-                yield out
-            if err:
-                yield err
-            if rc != 0:
-                raise RuntimeError(f"dpkg install failed (exit {rc})")
+            install_cmd = privilege_escalation_cmd() + ["dpkg", "-i"] + [str(d) for d in debs]
+            rc = 0
+            for line in self._backend.stream(install_cmd):
+                yield line
+                if line.startswith("dpkg: error") or "Error" in line:
+                    rc = 1
+            # Confirm via dpkg exit code by re-querying status
+            check_rc, _, _ = self._backend._run(
+                ["dpkg-query", "-W", "-f=${Status}", f"linux-image-{ver}-generic"]
+            )
+            if check_rc != 0 and rc != 0:
+                raise RuntimeError(f"dpkg install failed for kernel {ver}")
             yield f"Kernel {ver} installed successfully.\n"
 
     # ------------------------------------------------------------------
@@ -162,7 +160,8 @@ class MainlinePPAProvider(KernelProvider):
 
         # Find all installed packages for this version
         pkgs = [
-            p for p in self._backend.installed_packages("linux-")
+            p
+            for p in self._backend.installed_packages("linux-")
             if ver.replace(".", ".") in p or ver in p
         ]
         if not pkgs:
@@ -184,18 +183,12 @@ class MainlinePPAProvider(KernelProvider):
 
     def hold(self, entry: KernelEntry) -> tuple[int, str, str]:
         ver = str(entry.version)
-        pkgs = [
-            p for p in self._backend.installed_packages("linux-")
-            if ver in p
-        ]
+        pkgs = [p for p in self._backend.installed_packages("linux-") if ver in p]
         return self._backend.hold(pkgs) if pkgs else (0, "Nothing to hold.", "")
 
     def unhold(self, entry: KernelEntry) -> tuple[int, str, str]:
         ver = str(entry.version)
-        pkgs = [
-            p for p in self._backend.installed_packages("linux-")
-            if ver in p
-        ]
+        pkgs = [p for p in self._backend.installed_packages("linux-") if ver in p]
         return self._backend.unhold(pkgs) if pkgs else (0, "Nothing to unhold.", "")
 
     # ------------------------------------------------------------------
@@ -209,22 +202,22 @@ class MainlinePPAProvider(KernelProvider):
 
         # Each kernel version is a link like: <a href="v6.9/">v6.9/</a>
         versions = re.findall(r'href="(v[\d.]+(?:-rc\d+)?)/?"', html)
-        entries = []
+        result: list[KernelEntry] = []
         for v in versions:
             ver_str = v.lstrip("v")
-            entries.append(KernelEntry(
-                version=KernelVersion(ver_str),
-                family=self.family,
-                provider_id=self.id,
-                arch=arch,
-                flavor="generic",
-                source_url=f"{_PPA_BASE}{v}/",
-            ))
-        return entries
+            result.append(
+                KernelEntry(
+                    version=KernelVersion(ver_str),
+                    family=self.family,
+                    provider_id=self.id,
+                    arch=arch,
+                    flavor="generic",
+                    source_url=f"{_PPA_BASE}{v}/",
+                )
+            )
+        return result
 
-    def _fetch_package_urls(
-        self, ppa_url: str, arch: str
-    ) -> tuple[list[str], dict[str, str]]:
+    def _fetch_package_urls(self, ppa_url: str, arch: str) -> tuple[list[str], dict[str, str]]:
         """
         Fetch the per-version index page and extract .deb URLs + checksums.
         Returns (urls, {filename: sha256}).
@@ -247,9 +240,7 @@ class MainlinePPAProvider(KernelProvider):
                 pass
 
         # Find .deb files for this arch
-        deb_pattern = re.compile(
-            rf'href="(linux-(?:image|headers|modules)[^"]*_{arch}\.deb)"'
-        )
+        deb_pattern = re.compile(rf'href="(linux-(?:image|headers|modules)[^"]*_{arch}\.deb)"')
         filenames = deb_pattern.findall(html)
         urls = [ppa_url + f for f in filenames]
         return urls, checksums

@@ -19,12 +19,12 @@ a compilation dialog; the CLI exposes it via `ukm gentoo compile`.
 from __future__ import annotations
 
 import re
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Iterator
 
+from ukm.core.backends.portage import PortageBackend
 from ukm.core.kernel import KernelEntry, KernelFamily, KernelStatus, KernelVersion
 from ukm.core.providers.base import KernelProvider
-from ukm.core.backends.portage import PortageBackend
 
 # Well-known Gentoo kernel packages in sys-kernel/
 _GENTOO_KERNEL_PACKAGES = [
@@ -46,25 +46,24 @@ _GENTOO_KERNEL_PACKAGES = [
 
 # Descriptions for display
 _PKG_DESCRIPTIONS = {
-    "gentoo-kernel":     "Gentoo kernel with genkernel (binary config)",
+    "gentoo-kernel": "Gentoo kernel with genkernel (binary config)",
     "gentoo-kernel-bin": "Gentoo kernel pre-compiled binary",
-    "vanilla-kernel":    "Vanilla upstream kernel (binary config)",
-    "gentoo-sources":    "Gentoo-patched kernel sources (compile yourself)",
-    "vanilla-sources":   "Vanilla upstream kernel sources",
-    "rt-sources":        "PREEMPT_RT real-time kernel sources",
-    "zen-sources":       "Zen kernel sources",
-    "hardened-sources":  "Hardened kernel sources",
-    "pf-sources":        "pf-kernel sources (BFQ + UKSM + ...)",
-    "ck-sources":        "Con Kolivas patchset sources",
-    "git-sources":       "Latest upstream git kernel sources",
+    "vanilla-kernel": "Vanilla upstream kernel (binary config)",
+    "gentoo-sources": "Gentoo-patched kernel sources (compile yourself)",
+    "vanilla-sources": "Vanilla upstream kernel sources",
+    "rt-sources": "PREEMPT_RT real-time kernel sources",
+    "zen-sources": "Zen kernel sources",
+    "hardened-sources": "Hardened kernel sources",
+    "pf-sources": "pf-kernel sources (BFQ + UKSM + ...)",
+    "ck-sources": "Con Kolivas patchset sources",
+    "git-sources": "Latest upstream git kernel sources",
     "raspberrypi-sources": "Raspberry Pi kernel sources",
-    "mips-sources":      "MIPS architecture kernel sources",
-    "arm-sources":       "ARM architecture kernel sources",
+    "mips-sources": "MIPS architecture kernel sources",
+    "arm-sources": "ARM architecture kernel sources",
 }
 
 
 class GentooProvider(KernelProvider):
-
     def __init__(self, backend: PortageBackend) -> None:
         if not isinstance(backend, PortageBackend):
             raise TypeError("GentooProvider requires a PortageBackend")
@@ -102,7 +101,7 @@ class GentooProvider(KernelProvider):
         if refresh:
             self._portage.refresh_cache()
 
-        entries: list[KernelEntry] = []
+        result: list[KernelEntry] = []
 
         # --- Package-mode entries (emerge-installable) ---
         for atom in _GENTOO_KERNEL_PACKAGES:
@@ -114,23 +113,27 @@ class GentooProvider(KernelProvider):
             for ver_str in versions:
                 is_inst = ver_str in installed_versions
                 is_run = running and ver_str in running
-                status = KernelStatus.RUNNING if is_run else (
-                    KernelStatus.INSTALLED if is_inst else KernelStatus.AVAILABLE
+                status = (
+                    KernelStatus.RUNNING
+                    if is_run
+                    else (KernelStatus.INSTALLED if is_inst else KernelStatus.AVAILABLE)
                 )
                 if self._portage.is_held(atom):
                     status = KernelStatus.HELD
 
-                entries.append(KernelEntry(
-                    version=KernelVersion(ver_str),
-                    family=self.family,
-                    provider_id=self.id,
-                    arch=arch,
-                    flavor=pkg_name,
-                    description=_PKG_DESCRIPTIONS.get(pkg_name, atom),
-                    status=status,
-                    held=self._portage.is_held(atom),
-                    source_url=f"https://packages.gentoo.org/packages/{atom}",
-                ))
+                result.append(
+                    KernelEntry(
+                        version=KernelVersion(ver_str),
+                        family=self.family,
+                        provider_id=self.id,
+                        arch=arch,
+                        flavor=pkg_name,
+                        description=_PKG_DESCRIPTIONS.get(pkg_name, atom),
+                        status=status,
+                        held=self._portage.is_held(atom),
+                        source_url=f"https://packages.gentoo.org/packages/{atom}",
+                    )
+                )
 
         # --- Source-mode entries (already-installed source trees) ---
         for src_path in self._portage.list_kernel_sources():
@@ -141,19 +144,21 @@ class GentooProvider(KernelProvider):
             is_compiled = self._is_compiled(src_path)
             status = KernelStatus.INSTALLED if is_compiled else KernelStatus.AVAILABLE
 
-            entries.append(KernelEntry(
-                version=KernelVersion(ver_str),
-                family=self.family,
-                provider_id=self.id,
-                arch=arch,
-                flavor="source",
-                description=f"Source tree: {src_path}",
-                status=status,
-                source_url=src_path,
-                notes="Source tree — use 'Compile' to build",
-            ))
+            result.append(
+                KernelEntry(
+                    version=KernelVersion(ver_str),
+                    family=self.family,
+                    provider_id=self.id,
+                    arch=arch,
+                    flavor="source",
+                    description=f"Source tree: {src_path}",
+                    status=status,
+                    source_url=src_path,
+                    notes="Source tree — use 'Compile' to build",
+                )
+            )
 
-        return sorted(entries, key=lambda e: e.version, reverse=True)
+        return sorted(result, key=lambda e: e.version, reverse=True)
 
     # ------------------------------------------------------------------
     # install() — package mode
@@ -173,19 +178,21 @@ class GentooProvider(KernelProvider):
         versioned_atom = f"={atom}-{ver}"
 
         yield f"Installing {versioned_atom} via emerge...\n"
-        for line in self._portage.stream(
-            self._portage._run.__func__  # placeholder
-            if False else []
-        ):
-            yield line
+        from ukm.core.system import privilege_escalation_cmd
 
-        rc, out, err = self._portage.install([versioned_atom])
-        if out:
-            yield out
-        if err:
-            yield err
+        cmd = privilege_escalation_cmd() + [
+            "emerge",
+            "--ask=n",
+            "--quiet-build",
+            "--noreplace",
+            versioned_atom,
+        ]
+        yield from self._portage.stream(cmd)
+
+        # Confirm installation succeeded
+        rc, out, err = self._portage._run(["equery", "list", "-i", versioned_atom])
         if rc != 0:
-            raise RuntimeError(f"emerge failed (exit {rc})")
+            raise RuntimeError(f"emerge failed — {versioned_atom} not found after install")
         yield f"Kernel {entry.display_name} installed.\n"
 
     # ------------------------------------------------------------------
@@ -276,9 +283,7 @@ class GentooProvider(KernelProvider):
 
     def _available_versions(self, atom: str) -> list[str]:
         """Query portage for available versions of an atom."""
-        rc, out, _ = self._portage._run(
-            ["emerge", "--search", f"^{atom}$"]
-        )
+        rc, out, _ = self._portage._run(["emerge", "--search", f"^{atom}$"])
         if rc != 0:
             return []
         versions = re.findall(r"Latest version available:\s+(\S+)", out)
@@ -286,15 +291,14 @@ class GentooProvider(KernelProvider):
 
     def _installed_versions(self, atom: str) -> list[str]:
         """Return installed versions of an atom."""
-        rc, out, _ = self._portage._run(
-            ["equery", "list", "-i", "--format=$version", atom]
-        )
+        rc, out, _ = self._portage._run(["equery", "list", "-i", "--format=$version", atom])
         if rc != 0:
             return []
         return [v.strip() for v in out.splitlines() if v.strip()]
 
     def _running_version(self) -> str:
         from ukm.core.system import system_info
+
         return system_info().running_kernel
 
     @staticmethod
@@ -307,5 +311,7 @@ class GentooProvider(KernelProvider):
     def _is_compiled(src_path: str) -> bool:
         """Check if a vmlinuz or bzImage exists for this source tree."""
         src = Path(src_path)
-        return (src / "arch" / "x86" / "boot" / "bzImage").exists() or \
-               any(Path("/boot").glob(f"vmlinuz-*{src.name.replace('linux-', '')}*"))
+        if (src / "arch" / "x86" / "boot" / "bzImage").exists():
+            return True
+        stem = src.name.replace("linux-", "")
+        return any(Path("/boot").glob(f"vmlinuz-*{stem}*"))

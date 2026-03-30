@@ -1,0 +1,14 @@
+[Unit]
+Description=Check for new kernels every 12 hours
+Documentation=https://github.com/ukm-project/ukm
+
+[Timer]
+# Run 5 minutes after login, then every 12 hours
+OnStartupSec=5min
+OnUnitActiveSec=12h
+# Randomise start by up to 10 minutes to avoid thundering-herd on shared systems
+RandomizedDelaySec=10min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

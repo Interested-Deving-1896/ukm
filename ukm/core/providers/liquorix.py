@@ -9,7 +9,7 @@ Repository: https://liquorix.net
 
 from __future__ import annotations
 
-from typing import Iterator
+from collections.abc import Iterator
 
 from ukm.core.kernel import KernelEntry, KernelFamily, KernelStatus, KernelVersion
 from ukm.core.providers.base import KernelProvider
@@ -20,7 +20,6 @@ _SUPPORTED_ARCHES = ["amd64"]
 
 
 class LiquorixProvider(KernelProvider):
-
     @property
     def id(self) -> str:
         return "liquorix"
@@ -39,6 +38,7 @@ class LiquorixProvider(KernelProvider):
 
     def is_available(self) -> bool:
         import shutil
+
         return bool(shutil.which("apt-get")) and system_info().arch == "amd64"
 
     def availability_reason(self) -> str:
@@ -56,7 +56,10 @@ class LiquorixProvider(KernelProvider):
         Liquorix provides an official install script that adds the repo and key.
         We download and execute it with privilege escalation.
         """
-        import shutil, urllib.request, tempfile, os
+        import os
+        import tempfile
+        import urllib.request
+
         from ukm.core.system import privilege_escalation_cmd
 
         yield "Downloading Liquorix install script...\n"
@@ -70,10 +73,7 @@ class LiquorixProvider(KernelProvider):
 
         os.chmod(script_path, 0o755)
         yield "Running Liquorix install script...\n"
-        for line in self._backend.stream(
-            privilege_escalation_cmd() + ["bash", script_path]
-        ):
-            yield line
+        yield from self._backend.stream(privilege_escalation_cmd() + ["bash", script_path])
         os.unlink(script_path)
         yield "Liquorix repository configured.\n"
 
@@ -94,7 +94,7 @@ class LiquorixProvider(KernelProvider):
 
         installed_raw = self._backend.installed_packages("linux-image-liquorix")
         running = system_info().running_kernel
-        entries: list[KernelEntry] = []
+        result: list[KernelEntry] = []
 
         for line in out.splitlines():
             pkg_name = line.split()[0] if line.split() else ""
@@ -116,37 +116,51 @@ class LiquorixProvider(KernelProvider):
             if self._backend.is_held(pkg_name):
                 status = KernelStatus.HELD
 
-            entries.append(KernelEntry(
-                version=KernelVersion(ver_str),
-                family=self.family,
-                provider_id=self.id,
-                arch=arch,
-                flavor="liquorix",
-                description="Low-latency desktop/gaming kernel",
-                status=status,
-                held=self._backend.is_held(pkg_name),
-            ))
+            result.append(
+                KernelEntry(
+                    version=KernelVersion(ver_str),
+                    family=self.family,
+                    provider_id=self.id,
+                    arch=arch,
+                    flavor="liquorix",
+                    description="Low-latency desktop/gaming kernel",
+                    status=status,
+                    held=self._backend.is_held(pkg_name),
+                )
+            )
 
-        return sorted(entries, key=lambda e: e.version, reverse=True)
+        return sorted(result, key=lambda e: e.version, reverse=True)
 
     def install(self, entry: KernelEntry) -> Iterator[str]:
+        from ukm.core.system import privilege_escalation_cmd
+
         ver = str(entry.version)
-        image_pkg = f"linux-image-liquorix-amd64"
-        headers_pkg = f"linux-headers-liquorix-amd64"
+        image_pkg = "linux-image-liquorix-amd64"
+        headers_pkg = "linux-headers-liquorix-amd64"
         yield f"Installing Liquorix kernel {ver}...\n"
-        rc, out, err = self._backend.install([image_pkg, headers_pkg])
-        if out:
-            yield out
-        if err:
-            yield err
+        cmd = privilege_escalation_cmd() + [
+            "apt-get",
+            "install",
+            "-y",
+            "--no-install-recommends",
+            image_pkg,
+            headers_pkg,
+        ]
+        rc = 0
+        for line in self._backend.stream(cmd):
+            yield line
+            if "E:" in line or "error" in line.lower():
+                rc = 1
         if rc != 0:
-            raise RuntimeError(f"Installation failed (exit {rc})")
+            raise RuntimeError(f"Installation failed for Liquorix {ver}")
         yield f"Liquorix kernel {ver} installed.\n"
 
     def remove(self, entry: KernelEntry, purge: bool = False) -> Iterator[str]:
         ver = str(entry.version)
         yield f"Removing Liquorix kernel {ver}...\n"
-        pkgs = [p for p in self._backend.installed_packages("linux-") if "liquorix" in p and ver in p]
+        pkgs = [
+            p for p in self._backend.installed_packages("linux-") if "liquorix" in p and ver in p
+        ]
         if not pkgs:
             yield "No matching packages found.\n"
             return
@@ -160,11 +174,19 @@ class LiquorixProvider(KernelProvider):
         yield f"Liquorix kernel {ver} removed.\n"
 
     def hold(self, entry: KernelEntry) -> tuple[int, str, str]:
-        pkgs = [p for p in self._backend.installed_packages("linux-") if "liquorix" in p and str(entry.version) in p]
+        pkgs = [
+            p
+            for p in self._backend.installed_packages("linux-")
+            if "liquorix" in p and str(entry.version) in p
+        ]
         return self._backend.hold(pkgs) if pkgs else (0, "Nothing to hold.", "")
 
     def unhold(self, entry: KernelEntry) -> tuple[int, str, str]:
-        pkgs = [p for p in self._backend.installed_packages("linux-") if "liquorix" in p and str(entry.version) in p]
+        pkgs = [
+            p
+            for p in self._backend.installed_packages("linux-")
+            if "liquorix" in p and str(entry.version) in p
+        ]
         return self._backend.unhold(pkgs) if pkgs else (0, "Nothing to unhold.", "")
 
     def _version_from_apt(self, pkg: str) -> str:

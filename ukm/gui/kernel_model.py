@@ -7,35 +7,37 @@ Supports sorting and filtering via QSortFilterProxyModel.
 
 from __future__ import annotations
 
-from ukm.qt import (
-    Qt, QAbstractTableModel, QModelIndex, QPersistentModelIndex,
-    QColor, QFont, QBrush,
-)
 from ukm.core.kernel import KernelEntry, KernelStatus
+from ukm.qt import (
+    QAbstractTableModel,
+    QColor,
+    QFont,
+    QModelIndex,
+    Qt,
+)
 
 # Column indices
-COL_VERSION  = 0
-COL_FLAVOR   = 1
-COL_FAMILY   = 2
-COL_ARCH     = 3
-COL_STATUS   = 4
-COL_HELD     = 5
+COL_VERSION = 0
+COL_FLAVOR = 1
+COL_FAMILY = 2
+COL_ARCH = 3
+COL_STATUS = 4
+COL_HELD = 5
 COL_PROVIDER = 6
-COL_NOTES    = 7
+COL_NOTES = 7
 
 HEADERS = ["Version", "Flavor", "Family", "Arch", "Status", "Held", "Provider", "Notes"]
 
 # Status colours
 _STATUS_COLOURS = {
-    KernelStatus.RUNNING:   QColor("#2ecc71"),   # green
-    KernelStatus.INSTALLED: QColor("#3498db"),   # blue
-    KernelStatus.HELD:      QColor("#e67e22"),   # orange
+    KernelStatus.RUNNING: QColor("#2ecc71"),  # green
+    KernelStatus.INSTALLED: QColor("#3498db"),  # blue
+    KernelStatus.HELD: QColor("#e67e22"),  # orange
     KernelStatus.AVAILABLE: None,
 }
 
 
 class KernelTableModel(QAbstractTableModel):
-
     def __init__(self, entries: list[KernelEntry] | None = None, parent=None) -> None:
         super().__init__(parent)
         self._entries: list[KernelEntry] = entries or []
@@ -44,10 +46,10 @@ class KernelTableModel(QAbstractTableModel):
     # QAbstractTableModel interface
     # ------------------------------------------------------------------
 
-    def rowCount(self, parent=QModelIndex()) -> int:
+    def rowCount(self, parent=None) -> int:
         return len(self._entries)
 
-    def columnCount(self, parent=QModelIndex()) -> int:
+    def columnCount(self, parent=None) -> int:
         return len(HEADERS)
 
     def headerData(self, section: int, orientation, role=Qt.ItemDataRole.DisplayRole):
@@ -70,11 +72,10 @@ class KernelTableModel(QAbstractTableModel):
             if colour:
                 return colour
 
-        if role == Qt.ItemDataRole.FontRole:
-            if entry.is_running:
-                f = QFont()
-                f.setBold(True)
-                return f
+        if role == Qt.ItemDataRole.FontRole and entry.is_running:
+            f = QFont()
+            f.setBold(True)
+            return f
 
         if role == Qt.ItemDataRole.UserRole:
             # Return the raw KernelEntry for the delegate / action layer
@@ -101,9 +102,11 @@ class KernelTableModel(QAbstractTableModel):
 
     def update_entry(self, entry: KernelEntry) -> None:
         for i, e in enumerate(self._entries):
-            if (e.version == entry.version and
-                    e.provider_id == entry.provider_id and
-                    e.flavor == entry.flavor):
+            if (
+                e.version == entry.version
+                and e.provider_id == entry.provider_id
+                and e.flavor == entry.flavor
+            ):
                 self._entries[i] = entry
                 top_left = self.index(i, 0)
                 bottom_right = self.index(i, len(HEADERS) - 1)
@@ -116,15 +119,22 @@ class KernelTableModel(QAbstractTableModel):
 
     @staticmethod
     def _display(entry: KernelEntry, col: int) -> str:
-        match col:
-            case 0: return str(entry.version)
-            case 1: return entry.flavor
-            case 2: return entry.family.value
-            case 3: return entry.arch
-            case 4: return entry.status.name.lower()
-            case 5: return "●" if entry.held else ""
-            case 6: return entry.provider_id
-            case 7: return entry.notes[:60] + "…" if len(entry.notes) > 60 else entry.notes
+        if col == 0:
+            return str(entry.version)
+        if col == 1:
+            return entry.flavor
+        if col == 2:
+            return entry.family.value
+        if col == 3:
+            return entry.arch
+        if col == 4:
+            return entry.status.name.lower()
+        if col == 5:
+            return "●" if entry.held else ""
+        if col == 6:
+            return entry.provider_id
+        if col == 7:
+            return entry.notes[:60] + "…" if len(entry.notes) > 60 else entry.notes
         return ""
 
     @staticmethod

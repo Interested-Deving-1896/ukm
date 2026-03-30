@@ -11,8 +11,8 @@ import sys
 
 
 def main(argv: list[str] | None = None) -> int:
-    from ukm.qt import QApplication
     from ukm.gui.main_window import MainWindow
+    from ukm.qt import QApplication
 
     app = QApplication(argv or sys.argv)
     app.setApplicationName("ukm")

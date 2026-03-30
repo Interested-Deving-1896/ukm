@@ -10,14 +10,15 @@ from __future__ import annotations
 
 from ukm.core.backends import get_backend
 from ukm.core.backends.portage import PortageBackend
+from ukm.core.providers.aur import AURProvider
 from ukm.core.providers.base import KernelProvider
-from ukm.core.providers.mainline_ppa import MainlinePPAProvider
-from ukm.core.providers.xanmod import XanModProvider
-from ukm.core.providers.liquorix import LiquorixProvider
 from ukm.core.providers.distro_native import DistroNativeProvider
 from ukm.core.providers.gentoo import GentooProvider
+from ukm.core.providers.liquorix import LiquorixProvider
 from ukm.core.providers.local_file import LocalFileProvider
-from ukm.core.system import system_info
+from ukm.core.providers.mainline_ppa import MainlinePPAProvider
+from ukm.core.providers.xanmod import XanModProvider
+from ukm.core.system import PackageManagerKind, system_info
 
 
 def get_providers(arch: str | None = None) -> list[KernelProvider]:
@@ -41,7 +42,11 @@ def get_providers(arch: str | None = None) -> list[KernelProvider]:
         LocalFileProvider(backend),
     ]
 
-    # Add Gentoo provider only when portage is the backend
+    # AUR provider — Arch family only
+    if system_info().package_manager == PackageManagerKind.PACMAN:
+        all_providers.append(AURProvider(backend))
+
+    # Gentoo provider — portage backend only
     if isinstance(backend, PortageBackend):
         all_providers.append(GentooProvider(backend))
 
@@ -55,6 +60,7 @@ __all__ = [
     "XanModProvider",
     "LiquorixProvider",
     "DistroNativeProvider",
+    "AURProvider",
     "GentooProvider",
     "LocalFileProvider",
     "get_providers",

@@ -12,13 +12,12 @@ deliver. The UI and CLI filter providers by the current system architecture.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Iterator
+from collections.abc import Iterator
 
 from ukm.core.kernel import KernelEntry, KernelFamily
 
 
 class KernelProvider(ABC):
-
     def __init__(self, backend) -> None:
         # backend: PackageBackend — injected so providers are testable
         self._backend = backend

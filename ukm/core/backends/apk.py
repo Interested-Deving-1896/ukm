@@ -11,7 +11,6 @@ from ukm.core.system import privilege_escalation_cmd
 
 
 class ApkBackend(PackageBackend):
-
     @property
     def name(self) -> str:
         return "apk"
@@ -23,20 +22,14 @@ class ApkBackend(PackageBackend):
         return self._run(privilege_escalation_cmd() + ["apk", "update"])
 
     def install(self, packages: list[str]) -> tuple[int, str, str]:
-        return self._run(
-            privilege_escalation_cmd() + ["apk", "add"] + packages
-        )
+        return self._run(privilege_escalation_cmd() + ["apk", "add"] + packages)
 
     def install_local(self, paths: list[str]) -> tuple[int, str, str]:
-        return self._run(
-            privilege_escalation_cmd() + ["apk", "add", "--allow-untrusted"] + paths
-        )
+        return self._run(privilege_escalation_cmd() + ["apk", "add", "--allow-untrusted"] + paths)
 
     def remove(self, packages: list[str], purge: bool = False) -> tuple[int, str, str]:
         flags = ["--purge"] if purge else []
-        return self._run(
-            privilege_escalation_cmd() + ["apk", "del"] + flags + packages
-        )
+        return self._run(privilege_escalation_cmd() + ["apk", "del"] + flags + packages)
 
     def hold(self, packages: list[str]) -> tuple[int, str, str]:
         """
@@ -47,9 +40,7 @@ class ApkBackend(PackageBackend):
             rc, out, err = self._run(["apk", "info", "-e", pkg])
             if rc == 0:
                 # Pin to exact version
-                rc2, out2, err2 = self._run(
-                    privilege_escalation_cmd() + ["apk", "add", f"{pkg}="]
-                )
+                rc2, out2, err2 = self._run(privilege_escalation_cmd() + ["apk", "add", f"{pkg}="])
                 results.append((rc2, out2, err2))
         if not results:
             return 0, "", ""
@@ -57,9 +48,7 @@ class ApkBackend(PackageBackend):
         return results[-1]
 
     def unhold(self, packages: list[str]) -> tuple[int, str, str]:
-        return self._run(
-            privilege_escalation_cmd() + ["apk", "add"] + packages
-        )
+        return self._run(privilege_escalation_cmd() + ["apk", "add"] + packages)
 
     def is_installed(self, package: str) -> bool:
         rc, _, _ = self._run(["apk", "info", "-e", package])

@@ -11,7 +11,6 @@ from ukm.core.system import privilege_escalation_cmd
 
 
 class PacmanBackend(PackageBackend):
-
     @property
     def name(self) -> str:
         return "pacman"
@@ -23,14 +22,10 @@ class PacmanBackend(PackageBackend):
         return self._run(privilege_escalation_cmd() + ["pacman", "-Sy", "--noconfirm"])
 
     def install(self, packages: list[str]) -> tuple[int, str, str]:
-        return self._run(
-            privilege_escalation_cmd() + ["pacman", "-S", "--noconfirm"] + packages
-        )
+        return self._run(privilege_escalation_cmd() + ["pacman", "-S", "--noconfirm"] + packages)
 
     def install_local(self, paths: list[str]) -> tuple[int, str, str]:
-        return self._run(
-            privilege_escalation_cmd() + ["pacman", "-U", "--noconfirm"] + paths
-        )
+        return self._run(privilege_escalation_cmd() + ["pacman", "-U", "--noconfirm"] + paths)
 
     def remove(self, packages: list[str], purge: bool = False) -> tuple[int, str, str]:
         flags = ["-Rns"] if purge else ["-R"]
@@ -98,13 +93,13 @@ class PacmanBackend(PackageBackend):
         if not found and add:
             new_lines.append(f"\nIgnorePkg = {' '.join(packages)}\n")
 
-        import tempfile, os
+        import os
+        import tempfile
+
         with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".conf") as f:
             f.writelines(new_lines)
             tmp = f.name
 
-        rc, out, err = self._run(
-            privilege_escalation_cmd() + ["cp", tmp, conf]
-        )
+        rc, out, err = self._run(privilege_escalation_cmd() + ["cp", tmp, conf])
         os.unlink(tmp)
         return rc, out, err

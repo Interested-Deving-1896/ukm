@@ -8,9 +8,10 @@ the CLI and the GUI.
 
 from __future__ import annotations
 
+import contextlib
 import json
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Iterator
 
 from ukm.core.kernel import KernelEntry, KernelFamily, KernelStatus
 from ukm.core.providers import get_providers
@@ -21,7 +22,6 @@ _STATE_FILE = Path.home() / ".config" / "ukm" / "state.json"
 
 
 class KernelManager:
-
     def __init__(self, arch: str | None = None) -> None:
         self._arch = arch or system_info().arch
         self._providers: list[KernelProvider] = get_providers(self._arch)
@@ -46,11 +46,8 @@ class KernelManager:
         """Return all kernels from all available providers, sorted newest first."""
         entries: list[KernelEntry] = []
         for provider in self._providers:
-            try:
+            with contextlib.suppress(Exception):
                 entries.extend(provider.list(self._arch, refresh=refresh))
-            except Exception as e:
-                # Don't let one broken provider kill the whole list
-                pass
         # Apply persisted notes and locks
         for entry in entries:
             key = self._state_key(entry)
@@ -87,18 +84,24 @@ class KernelManager:
                 f"{provider.availability_reason()}"
             )
         yield from provider.install(entry)
+        # Rebuild DKMS modules for the newly installed kernel
+        from ukm.core import dkms
+
+        yield from dkms.autoinstall(str(entry.version))
 
     def remove(self, entry: KernelEntry, purge: bool = False) -> Iterator[str]:
         if entry.is_running:
             raise RuntimeError("Cannot remove the currently running kernel.")
         if entry.held:
-            raise RuntimeError(
-                f"Kernel {entry.display_name} is locked. Unlock it first."
-            )
+            raise RuntimeError(f"Kernel {entry.display_name} is locked. Unlock it first.")
         provider = self.provider(entry.provider_id)
         if provider is None:
             raise RuntimeError(f"Provider '{entry.provider_id}' not found.")
         yield from provider.remove(entry, purge=purge)
+        # Clean up DKMS module builds for the removed kernel
+        from ukm.core import dkms
+
+        yield from dkms.remove_kernel(str(entry.version))
 
     # ------------------------------------------------------------------
     # Hold / Lock

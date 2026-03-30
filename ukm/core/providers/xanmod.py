@@ -9,8 +9,7 @@ Repository: https://xanmod.org
 
 from __future__ import annotations
 
-import re
-from typing import Iterator
+from collections.abc import Iterator
 
 from ukm.core.kernel import KernelEntry, KernelFamily, KernelStatus, KernelVersion
 from ukm.core.providers.base import KernelProvider
@@ -34,21 +33,26 @@ _XANMOD_PREFIXES = (
 
 # ISA-level flavors and their CPU requirements
 XANMOD_FLAVORS = {
-    "v1":   "Any x86-64 CPU (safe default)",
-    "v2":   "SSE4.2+ (~2008 onwards)",
-    "v3":   "AVX2+ (Intel Haswell / AMD Ryzen+)",
-    "v4":   "AVX-512 (high-end modern CPUs)",
+    "v1": "Any x86-64 CPU (safe default)",
+    "v2": "SSE4.2+ (~2008 onwards)",
+    "v3": "AVX2+ (Intel Haswell / AMD Ryzen+)",
+    "v4": "AVX-512 (high-end modern CPUs)",
     "edge": "Latest upstream, may be less stable",
-    "lts":  "Long-term support release",
-    "rt":   "PREEMPT_RT real-time kernel",
+    "lts": "Long-term support release",
+    "rt": "PREEMPT_RT real-time kernel",
 }
 
 
 class XanModProvider(KernelProvider):
-
     @property
     def id(self) -> str:
         return "xanmod"
+
+    def recommended_flavor(self) -> str:
+        """Return the highest XanMod ISA level the current CPU supports."""
+        from ukm.core.cpu import recommended_xanmod_level
+
+        return recommended_xanmod_level()
 
     @property
     def display_name(self) -> str:
@@ -64,6 +68,7 @@ class XanModProvider(KernelProvider):
 
     def is_available(self) -> bool:
         import shutil
+
         return bool(shutil.which("apt-get")) and system_info().arch == "amd64"
 
     def availability_reason(self) -> str:
@@ -74,13 +79,13 @@ class XanModProvider(KernelProvider):
 
     def is_repo_configured(self) -> bool:
         """Return True if the XanMod apt repository is already set up."""
-        import subprocess
         rc, out, _ = self._backend._run(["apt-cache", "search", "linux-xanmod"])
         return rc == 0 and "xanmod" in out.lower()
 
     def setup_repo(self) -> Iterator[str]:
         """Add the XanMod repository and import its signing key."""
         from ukm.core.backends.apt import AptBackend
+
         if not isinstance(self._backend, AptBackend):
             raise RuntimeError("XanMod repo setup requires an apt backend.")
         yield "Adding XanMod repository...\n"
@@ -108,9 +113,7 @@ class XanModProvider(KernelProvider):
             self._backend.refresh_cache()
 
         # Query apt cache for all xanmod packages
-        rc, out, _ = self._backend._run(
-            ["apt-cache", "search", "--names-only", "linux-xanmod"]
-        )
+        rc, out, _ = self._backend._run(["apt-cache", "search", "--names-only", "linux-xanmod"])
         if rc != 0:
             return []
 
@@ -156,29 +159,46 @@ class XanModProvider(KernelProvider):
                 held=self._backend.is_held(pkg_name),
             )
 
-        return sorted(entries.values(), key=lambda e: (e.version, e.flavor), reverse=True)
+        recommended = self.recommended_flavor()
+        result = sorted(entries.values(), key=lambda e: (e.version, e.flavor), reverse=True)
+        for entry in result:
+            if entry.flavor == recommended and not entry.description:
+                entry.description = (
+                    f"{XANMOD_FLAVORS.get(recommended, '')} ★ recommended for this CPU"
+                )
+            elif entry.flavor == recommended:
+                entry.description += " ★ recommended for this CPU"
+        return result
 
     def install(self, entry: KernelEntry) -> Iterator[str]:
+        from ukm.core.system import privilege_escalation_cmd
+
         pkg = self._pkg_name(entry)
-        yield f"Installing {pkg}...\n"
-        for line in self._backend.stream(
-            self._backend._run.__func__  # placeholder
-            if False else []
-        ):
+        headers_pkg = pkg.replace("linux-xanmod", "linux-headers-xanmod")
+        yield f"Installing {pkg} and {headers_pkg}...\n"
+        cmd = privilege_escalation_cmd() + [
+            "apt-get",
+            "install",
+            "-y",
+            "--no-install-recommends",
+            pkg,
+            headers_pkg,
+        ]
+        rc = 0
+        for line in self._backend.stream(cmd):
             yield line
-        rc, out, err = self._backend.install([pkg, pkg.replace("linux-xanmod", "linux-headers-xanmod")])
-        if out:
-            yield out
-        if err:
-            yield err
+            if "E:" in line or "error" in line.lower():
+                rc = 1
         if rc != 0:
-            raise RuntimeError(f"Installation failed (exit {rc})")
+            raise RuntimeError(f"Installation failed for {pkg}")
         yield f"XanMod kernel {entry.display_name} installed.\n"
 
     def remove(self, entry: KernelEntry, purge: bool = False) -> Iterator[str]:
         pkg = self._pkg_name(entry)
         yield f"Removing {pkg}...\n"
-        pkgs = [p for p in self._backend.installed_packages("linux-xanmod") if str(entry.version) in p]
+        pkgs = [
+            p for p in self._backend.installed_packages("linux-xanmod") if str(entry.version) in p
+        ]
         if not pkgs:
             yield "No matching packages found.\n"
             return
@@ -192,11 +212,15 @@ class XanModProvider(KernelProvider):
         yield f"XanMod kernel {entry.display_name} removed.\n"
 
     def hold(self, entry: KernelEntry) -> tuple[int, str, str]:
-        pkgs = [p for p in self._backend.installed_packages("linux-xanmod") if str(entry.version) in p]
+        pkgs = [
+            p for p in self._backend.installed_packages("linux-xanmod") if str(entry.version) in p
+        ]
         return self._backend.hold(pkgs) if pkgs else (0, "Nothing to hold.", "")
 
     def unhold(self, entry: KernelEntry) -> tuple[int, str, str]:
-        pkgs = [p for p in self._backend.installed_packages("linux-xanmod") if str(entry.version) in p]
+        pkgs = [
+            p for p in self._backend.installed_packages("linux-xanmod") if str(entry.version) in p
+        ]
         return self._backend.unhold(pkgs) if pkgs else (0, "Nothing to unhold.", "")
 
     # ------------------------------------------------------------------
@@ -205,7 +229,19 @@ class XanModProvider(KernelProvider):
     def _flavor_from_pkg(pkg: str) -> str:
         """Extract flavor from package name like linux-xanmod-edge or linux-xanmod-rt-v4."""
         suffix = pkg.replace("linux-xanmod", "").lstrip("-")
-        for flavor in ("edge", "lts", "rt-v4", "rt-v3", "rt-v2", "rt-v1", "rt", "v4", "v3", "v2", "v1"):
+        for flavor in (
+            "edge",
+            "lts",
+            "rt-v4",
+            "rt-v3",
+            "rt-v2",
+            "rt-v1",
+            "rt",
+            "v4",
+            "v3",
+            "v2",
+            "v1",
+        ):
             if suffix.startswith(flavor):
                 return flavor
         return "stable"

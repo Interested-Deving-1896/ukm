@@ -7,13 +7,18 @@ Displayed at the bottom of the main window, collapsible.
 from __future__ import annotations
 
 from ukm.qt import (
-    Qt, QWidget, QVBoxLayout, QHBoxLayout,
-    QTextEdit, QPushButton, QLabel, QSizePolicy, QFont,
+    QFont,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QSizePolicy,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
 )
 
 
 class LogPanel(QWidget):
-
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self._setup_ui()

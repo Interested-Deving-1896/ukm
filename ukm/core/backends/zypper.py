@@ -11,7 +11,6 @@ from ukm.core.system import privilege_escalation_cmd
 
 
 class ZypperBackend(PackageBackend):
-
     @property
     def name(self) -> str:
         return "zypper"
@@ -23,30 +22,20 @@ class ZypperBackend(PackageBackend):
         return self._run(privilege_escalation_cmd() + ["zypper", "refresh", "-q"])
 
     def install(self, packages: list[str]) -> tuple[int, str, str]:
-        return self._run(
-            privilege_escalation_cmd() + ["zypper", "install", "-y"] + packages
-        )
+        return self._run(privilege_escalation_cmd() + ["zypper", "install", "-y"] + packages)
 
     def install_local(self, paths: list[str]) -> tuple[int, str, str]:
-        return self._run(
-            privilege_escalation_cmd() + ["zypper", "install", "-y"] + paths
-        )
+        return self._run(privilege_escalation_cmd() + ["zypper", "install", "-y"] + paths)
 
     def remove(self, packages: list[str], purge: bool = False) -> tuple[int, str, str]:
-        return self._run(
-            privilege_escalation_cmd() + ["zypper", "remove", "-y"] + packages
-        )
+        return self._run(privilege_escalation_cmd() + ["zypper", "remove", "-y"] + packages)
 
     def hold(self, packages: list[str]) -> tuple[int, str, str]:
         """Lock packages using zypper addlock."""
-        return self._run(
-            privilege_escalation_cmd() + ["zypper", "addlock"] + packages
-        )
+        return self._run(privilege_escalation_cmd() + ["zypper", "addlock"] + packages)
 
     def unhold(self, packages: list[str]) -> tuple[int, str, str]:
-        return self._run(
-            privilege_escalation_cmd() + ["zypper", "removelock"] + packages
-        )
+        return self._run(privilege_escalation_cmd() + ["zypper", "removelock"] + packages)
 
     def is_installed(self, package: str) -> bool:
         rc, _, _ = self._run(["rpm", "-q", package])
