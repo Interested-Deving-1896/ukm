@@ -15,7 +15,6 @@ pkgbase = ukm
 	optdepends = dkms: automatic DKMS module rebuild after kernel install/remove
 	optdepends = libnotify: desktop notifications (notify-send)
 	source = ukm-0.1.0.tar.gz::https://github.com/ukm-project/ukm/archive/refs/tags/v0.1.0.tar.gz
-	# Update b2sums after tagging: curl -L <tarball_url> | b2sum
-	b2sums = SKIP
+	b2sums = cc556dcbc84f34a97b80b05af31486a51334a6fc95489f31bb664a55e71c2d9436675e07cf9ebfb9d479a3e55f03b979836ee917acba0249d46595b186d93f51
 
 pkgname = ukm
