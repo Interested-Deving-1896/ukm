@@ -19,7 +19,6 @@ from ukm.core.system import privilege_escalation_cmd
 
 
 class PortageBackend(PackageBackend):
-
     @property
     def name(self) -> str:
         return "portage"
@@ -39,9 +38,14 @@ class PortageBackend(PackageBackend):
 
     def install(self, packages: list[str]) -> tuple[int, str, str]:
         return self._run(
-            privilege_escalation_cmd() + [
-                "emerge", "--ask=n", "--quiet-build", "--noreplace",
-            ] + packages
+            privilege_escalation_cmd()
+            + [
+                "emerge",
+                "--ask=n",
+                "--quiet-build",
+                "--noreplace",
+            ]
+            + packages
         )
 
     def install_local(self, paths: list[str]) -> tuple[int, str, str]:
@@ -56,9 +60,7 @@ class PortageBackend(PackageBackend):
 
     def remove(self, packages: list[str], purge: bool = False) -> tuple[int, str, str]:
         flags = ["--depclean"] if purge else ["--unmerge"]
-        return self._run(
-            privilege_escalation_cmd() + ["emerge"] + flags + ["--ask=n"] + packages
-        )
+        return self._run(privilege_escalation_cmd() + ["emerge"] + flags + ["--ask=n"] + packages)
 
     def hold(self, packages: list[str]) -> tuple[int, str, str]:
         """
@@ -88,9 +90,7 @@ class PortageBackend(PackageBackend):
             with tempfile.NamedTemporaryFile(mode="w", delete=False) as f:
                 f.write(new_content)
                 tmp = f.name
-            rc, out, err = self._run(
-                privilege_escalation_cmd() + ["cp", tmp, str(mask_file)]
-            )
+            rc, out, err = self._run(privilege_escalation_cmd() + ["cp", tmp, str(mask_file)])
             os.unlink(tmp)
             return rc, out, err
         except Exception as e:
@@ -103,19 +103,14 @@ class PortageBackend(PackageBackend):
             return 0, "No held packages.", ""
         try:
             lines = mask_file.read_text().splitlines(keepends=True)
-            new_lines = [
-                line for line in lines
-                if not any(pkg in line for pkg in packages)
-            ]
+            new_lines = [line for line in lines if not any(pkg in line for pkg in packages)]
             import os
             import tempfile
 
             with tempfile.NamedTemporaryFile(mode="w", delete=False) as f:
                 f.writelines(new_lines)
                 tmp = f.name
-            rc, out, err = self._run(
-                privilege_escalation_cmd() + ["cp", tmp, str(mask_file)]
-            )
+            rc, out, err = self._run(privilege_escalation_cmd() + ["cp", tmp, str(mask_file)])
             os.unlink(tmp)
             return rc, out, err
         except Exception as e:
@@ -155,16 +150,11 @@ class PortageBackend(PackageBackend):
         src = Path("/usr/src")
         if not src.exists():
             return []
-        return sorted(
-            str(p) for p in src.iterdir()
-            if p.is_dir() and p.name.startswith("linux-")
-        )
+        return sorted(str(p) for p in src.iterdir() if p.is_dir() and p.name.startswith("linux-"))
 
     def set_active_source(self, src_path: str) -> tuple[int, str, str]:
         """Point /usr/src/linux symlink at the given source tree."""
-        return self._run(
-            privilege_escalation_cmd() + ["ln", "-sfn", src_path, "/usr/src/linux"]
-        )
+        return self._run(privilege_escalation_cmd() + ["ln", "-sfn", src_path, "/usr/src/linux"])
 
     def configure_kernel(self, src_path: str, target: str = "menuconfig") -> list[str]:
         """
@@ -186,7 +176,8 @@ class PortageBackend(PackageBackend):
         """
         cmd = privilege_escalation_cmd() + [
             "genkernel",
-            "--kernel-dir", src_path,
+            "--kernel-dir",
+            src_path,
             "--install",
             "--bootloader=grub2",
         ]
@@ -206,31 +197,33 @@ class PortageBackend(PackageBackend):
         jobs=0 means auto-detect (nproc).
         """
         import os
+
         j = jobs or os.cpu_count() or 1
-        cmd = privilege_escalation_cmd() + [
-            "make", "-C", src_path, f"-j{j}",
-        ] + (targets or ["bzImage", "modules"])
+        cmd = (
+            privilege_escalation_cmd()
+            + [
+                "make",
+                "-C",
+                src_path,
+                f"-j{j}",
+            ]
+            + (targets or ["bzImage", "modules"])
+        )
         return cmd
 
     def install_kernel_make(self, src_path: str) -> list[str]:
         """Return the make install + modules_install command."""
-        return privilege_escalation_cmd() + [
-            "make", "-C", src_path, "modules_install", "install"
-        ]
+        return privilege_escalation_cmd() + ["make", "-C", src_path, "modules_install", "install"]
 
     def update_bootloader(self) -> tuple[int, str, str]:
         """Regenerate grub config after a new kernel is installed."""
         if shutil.which("grub-mkconfig"):
             return self._run(
-                privilege_escalation_cmd() + [
-                    "grub-mkconfig", "-o", "/boot/grub/grub.cfg"
-                ]
+                privilege_escalation_cmd() + ["grub-mkconfig", "-o", "/boot/grub/grub.cfg"]
             )
         if shutil.which("grub2-mkconfig"):
             return self._run(
-                privilege_escalation_cmd() + [
-                    "grub2-mkconfig", "-o", "/boot/grub2/grub.cfg"
-                ]
+                privilege_escalation_cmd() + ["grub2-mkconfig", "-o", "/boot/grub2/grub.cfg"]
             )
         return 1, "", "No grub-mkconfig found. Update your bootloader manually."
 

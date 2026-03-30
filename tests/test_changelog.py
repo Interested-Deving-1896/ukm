@@ -10,7 +10,6 @@ from ukm.core.changelog import fetch, clear_cache, _fetch_mainline, _fetch_liquo
 
 
 class TestChangelogCache:
-
     def test_cached_result_returned(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             cache_dir = Path(tmpdir)
@@ -26,8 +25,12 @@ class TestChangelogCache:
     def test_cache_miss_calls_remote(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             cache_dir = Path(tmpdir)
-            with mock.patch("ukm.core.changelog._CACHE_DIR", cache_dir), \
-                 mock.patch("ukm.core.changelog._fetch_remote", return_value="remote text") as mock_fetch:
+            with (
+                mock.patch("ukm.core.changelog._CACHE_DIR", cache_dir),
+                mock.patch(
+                    "ukm.core.changelog._fetch_remote", return_value="remote text"
+                ) as mock_fetch,
+            ):
                 result = fetch("mainline_ppa", "6.9.0")
                 assert result == "remote text"
                 mock_fetch.assert_called_once_with("mainline_ppa", "6.9.0", "")
@@ -35,8 +38,10 @@ class TestChangelogCache:
     def test_result_written_to_cache(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             cache_dir = Path(tmpdir)
-            with mock.patch("ukm.core.changelog._CACHE_DIR", cache_dir), \
-                 mock.patch("ukm.core.changelog._fetch_remote", return_value="fresh text"):
+            with (
+                mock.patch("ukm.core.changelog._CACHE_DIR", cache_dir),
+                mock.patch("ukm.core.changelog._fetch_remote", return_value="fresh text"),
+            ):
                 fetch("mainline_ppa", "6.9.0")
                 cache_file = cache_dir / "mainline_ppa" / "6.9.0.txt"
                 assert cache_file.exists()
@@ -67,8 +72,10 @@ class TestChangelogCache:
     def test_empty_remote_not_cached(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             cache_dir = Path(tmpdir)
-            with mock.patch("ukm.core.changelog._CACHE_DIR", cache_dir), \
-                 mock.patch("ukm.core.changelog._fetch_remote", return_value=""):
+            with (
+                mock.patch("ukm.core.changelog._CACHE_DIR", cache_dir),
+                mock.patch("ukm.core.changelog._fetch_remote", return_value=""),
+            ):
                 result = fetch("mainline_ppa", "6.9.0")
                 assert result == ""
                 cache_file = cache_dir / "mainline_ppa" / "6.9.0.txt"
@@ -76,7 +83,6 @@ class TestChangelogCache:
 
 
 class TestMainlineFetcher:
-
     def test_fetches_changes_file(self):
         fake_content = b"Linux 6.9 release notes\n- fix A\n- fix B\n"
         with mock.patch("urllib.request.urlopen") as mock_open:
@@ -97,7 +103,6 @@ class TestMainlineFetcher:
 
 
 class TestLiquorixFetcher:
-
     def test_extracts_version_section(self):
         fake_changelog = (
             "--- 6.9.0-1 ---\n"
@@ -128,7 +133,6 @@ class TestLiquorixFetcher:
 
 
 class TestUnknownProvider:
-
     def test_unknown_provider_returns_empty(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             with mock.patch("ukm.core.changelog._CACHE_DIR", Path(tmpdir)):

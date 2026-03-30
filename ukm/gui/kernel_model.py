@@ -9,32 +9,35 @@ from __future__ import annotations
 
 from ukm.core.kernel import KernelEntry, KernelStatus
 from ukm.qt import (
-    QAbstractTableModel, QColor, QFont, QModelIndex, Qt,
+    QAbstractTableModel,
+    QColor,
+    QFont,
+    QModelIndex,
+    Qt,
 )
 
 # Column indices
-COL_VERSION  = 0
-COL_FLAVOR   = 1
-COL_FAMILY   = 2
-COL_ARCH     = 3
-COL_STATUS   = 4
-COL_HELD     = 5
+COL_VERSION = 0
+COL_FLAVOR = 1
+COL_FAMILY = 2
+COL_ARCH = 3
+COL_STATUS = 4
+COL_HELD = 5
 COL_PROVIDER = 6
-COL_NOTES    = 7
+COL_NOTES = 7
 
 HEADERS = ["Version", "Flavor", "Family", "Arch", "Status", "Held", "Provider", "Notes"]
 
 # Status colours
 _STATUS_COLOURS = {
-    KernelStatus.RUNNING:   QColor("#2ecc71"),   # green
-    KernelStatus.INSTALLED: QColor("#3498db"),   # blue
-    KernelStatus.HELD:      QColor("#e67e22"),   # orange
+    KernelStatus.RUNNING: QColor("#2ecc71"),  # green
+    KernelStatus.INSTALLED: QColor("#3498db"),  # blue
+    KernelStatus.HELD: QColor("#e67e22"),  # orange
     KernelStatus.AVAILABLE: None,
 }
 
 
 class KernelTableModel(QAbstractTableModel):
-
     def __init__(self, entries: list[KernelEntry] | None = None, parent=None) -> None:
         super().__init__(parent)
         self._entries: list[KernelEntry] = entries or []
@@ -99,9 +102,11 @@ class KernelTableModel(QAbstractTableModel):
 
     def update_entry(self, entry: KernelEntry) -> None:
         for i, e in enumerate(self._entries):
-            if (e.version == entry.version and
-                    e.provider_id == entry.provider_id and
-                    e.flavor == entry.flavor):
+            if (
+                e.version == entry.version
+                and e.provider_id == entry.provider_id
+                and e.flavor == entry.flavor
+            ):
                 self._entries[i] = entry
                 top_left = self.index(i, 0)
                 bottom_right = self.index(i, len(HEADERS) - 1)

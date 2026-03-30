@@ -21,7 +21,6 @@ from ukm.core.providers.base import KernelProvider
 
 
 class LocalFileProvider(KernelProvider):
-
     @property
     def id(self) -> str:
         return "local_file"

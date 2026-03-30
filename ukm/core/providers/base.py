@@ -18,7 +18,6 @@ from ukm.core.kernel import KernelEntry, KernelFamily
 
 
 class KernelProvider(ABC):
-
     def __init__(self, backend) -> None:
         # backend: PackageBackend — injected so providers are testable
         self._backend = backend

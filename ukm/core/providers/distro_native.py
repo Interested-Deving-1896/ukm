@@ -24,23 +24,29 @@ from ukm.core.system import PackageManagerKind, system_info
 
 # Per-backend search patterns
 _SEARCH_PATTERNS: dict[PackageManagerKind, list[str]] = {
-    PackageManagerKind.APT:    ["linux-image-"],
+    PackageManagerKind.APT: ["linux-image-"],
     PackageManagerKind.PACMAN: ["linux"],
-    PackageManagerKind.DNF:    ["kernel"],
+    PackageManagerKind.DNF: ["kernel"],
     PackageManagerKind.ZYPPER: ["kernel-"],
-    PackageManagerKind.APK:    ["linux-"],
+    PackageManagerKind.APK: ["linux-"],
 }
 
 # Pacman kernel packages (well-known set; apt/dnf/zypper use search)
 _PACMAN_KERNELS = [
-    "linux", "linux-lts", "linux-zen", "linux-hardened",
-    "linux-rt", "linux-rt-lts", "linux-cachyos", "linux-tkg-pds",
-    "linux-xanmod", "linux-xanmod-lts",
+    "linux",
+    "linux-lts",
+    "linux-zen",
+    "linux-hardened",
+    "linux-rt",
+    "linux-rt-lts",
+    "linux-cachyos",
+    "linux-tkg-pds",
+    "linux-xanmod",
+    "linux-xanmod-lts",
 ]
 
 
 class DistroNativeProvider(KernelProvider):
-
     @property
     def id(self) -> str:
         return "distro_native"
@@ -111,9 +117,7 @@ class DistroNativeProvider(KernelProvider):
     # ------------------------------------------------------------------
 
     def _list_apt(self, arch: str, running: str) -> list[KernelEntry]:
-        rc, out, _ = self._backend._run(
-            ["apt-cache", "search", "--names-only", "linux-image"]
-        )
+        rc, out, _ = self._backend._run(["apt-cache", "search", "--names-only", "linux-image"])
         if rc != 0:
             return []
 
@@ -132,22 +136,26 @@ class DistroNativeProvider(KernelProvider):
             flavor = self._apt_flavor(pkg)
             is_inst = pkg in installed
             is_run = running and ver_str in running
-            status = KernelStatus.RUNNING if is_run else (
-                KernelStatus.INSTALLED if is_inst else KernelStatus.AVAILABLE
+            status = (
+                KernelStatus.RUNNING
+                if is_run
+                else (KernelStatus.INSTALLED if is_inst else KernelStatus.AVAILABLE)
             )
             if self._backend.is_held(pkg):
                 status = KernelStatus.HELD
 
-            result.append(KernelEntry(
-                version=KernelVersion(ver_str),
-                family=self.family,
-                provider_id=self.id,
-                arch=arch,
-                flavor=flavor,
-                description=pkg,  # store pkg name for install/remove
-                status=status,
-                held=self._backend.is_held(pkg),
-            ))
+            result.append(
+                KernelEntry(
+                    version=KernelVersion(ver_str),
+                    family=self.family,
+                    provider_id=self.id,
+                    arch=arch,
+                    flavor=flavor,
+                    description=pkg,  # store pkg name for install/remove
+                    status=status,
+                    held=self._backend.is_held(pkg),
+                )
+            )
 
         return sorted(result, key=lambda e: e.version, reverse=True)
 
@@ -168,29 +176,31 @@ class DistroNativeProvider(KernelProvider):
 
             is_inst = self._backend.is_installed(pkg)
             is_run = running and (pkg in running or ver_str in running)
-            status = KernelStatus.RUNNING if is_run else (
-                KernelStatus.INSTALLED if is_inst else KernelStatus.AVAILABLE
+            status = (
+                KernelStatus.RUNNING
+                if is_run
+                else (KernelStatus.INSTALLED if is_inst else KernelStatus.AVAILABLE)
             )
             if self._backend.is_held(pkg):
                 status = KernelStatus.HELD
 
-            result.append(KernelEntry(
-                version=KernelVersion(ver_str),
-                family=self.family,
-                provider_id=self.id,
-                arch=arch,
-                flavor=pkg,
-                description=pkg,
-                status=status,
-                held=self._backend.is_held(pkg),
-            ))
+            result.append(
+                KernelEntry(
+                    version=KernelVersion(ver_str),
+                    family=self.family,
+                    provider_id=self.id,
+                    arch=arch,
+                    flavor=pkg,
+                    description=pkg,
+                    status=status,
+                    held=self._backend.is_held(pkg),
+                )
+            )
 
         return sorted(result, key=lambda e: e.version, reverse=True)
 
     def _list_dnf(self, arch: str, running: str) -> list[KernelEntry]:
-        rc, out, _ = self._backend._run(
-            ["dnf", "list", "--available", "kernel", "kernel-core"]
-        )
+        rc, out, _ = self._backend._run(["dnf", "list", "--available", "kernel", "kernel-core"])
         if rc != 0:
             return []
 
@@ -209,26 +219,28 @@ class DistroNativeProvider(KernelProvider):
             is_inst = any(pkg_id in p for p in installed_set)
             is_run = running and ver_str.split("-")[0] in running
 
-            status = KernelStatus.RUNNING if is_run else (
-                KernelStatus.INSTALLED if is_inst else KernelStatus.AVAILABLE
+            status = (
+                KernelStatus.RUNNING
+                if is_run
+                else (KernelStatus.INSTALLED if is_inst else KernelStatus.AVAILABLE)
             )
 
-            result.append(KernelEntry(
-                version=KernelVersion(ver_str),
-                family=self.family,
-                provider_id=self.id,
-                arch=arch,
-                flavor=parts[0],
-                description=parts[0],
-                status=status,
-            ))
+            result.append(
+                KernelEntry(
+                    version=KernelVersion(ver_str),
+                    family=self.family,
+                    provider_id=self.id,
+                    arch=arch,
+                    flavor=parts[0],
+                    description=parts[0],
+                    status=status,
+                )
+            )
 
         return sorted(result, key=lambda e: e.version, reverse=True)
 
     def _list_zypper(self, arch: str, running: str) -> list[KernelEntry]:
-        rc, out, _ = self._backend._run(
-            ["zypper", "search", "-t", "package", "kernel-"]
-        )
+        rc, out, _ = self._backend._run(["zypper", "search", "-t", "package", "kernel-"])
         if rc != 0:
             return []
 
@@ -246,19 +258,23 @@ class DistroNativeProvider(KernelProvider):
 
             is_inst = self._backend.is_installed(pkg_name)
             is_run = running and ver_str in running
-            status = KernelStatus.RUNNING if is_run else (
-                KernelStatus.INSTALLED if is_inst else KernelStatus.AVAILABLE
+            status = (
+                KernelStatus.RUNNING
+                if is_run
+                else (KernelStatus.INSTALLED if is_inst else KernelStatus.AVAILABLE)
             )
 
-            result.append(KernelEntry(
-                version=KernelVersion(ver_str),
-                family=self.family,
-                provider_id=self.id,
-                arch=arch,
-                flavor=pkg_name,
-                description=pkg_name,
-                status=status,
-            ))
+            result.append(
+                KernelEntry(
+                    version=KernelVersion(ver_str),
+                    family=self.family,
+                    provider_id=self.id,
+                    arch=arch,
+                    flavor=pkg_name,
+                    description=pkg_name,
+                    status=status,
+                )
+            )
 
         return sorted(result, key=lambda e: e.version, reverse=True)
 
@@ -279,19 +295,23 @@ class DistroNativeProvider(KernelProvider):
             pkg_name, ver_str = m.group(1), m.group(2)
             is_inst = self._backend.is_installed(pkg_name)
             is_run = running and ver_str in running
-            status = KernelStatus.RUNNING if is_run else (
-                KernelStatus.INSTALLED if is_inst else KernelStatus.AVAILABLE
+            status = (
+                KernelStatus.RUNNING
+                if is_run
+                else (KernelStatus.INSTALLED if is_inst else KernelStatus.AVAILABLE)
             )
 
-            result.append(KernelEntry(
-                version=KernelVersion(ver_str),
-                family=self.family,
-                provider_id=self.id,
-                arch=arch,
-                flavor=pkg_name,
-                description=pkg_name,
-                status=status,
-            ))
+            result.append(
+                KernelEntry(
+                    version=KernelVersion(ver_str),
+                    family=self.family,
+                    provider_id=self.id,
+                    arch=arch,
+                    flavor=pkg_name,
+                    description=pkg_name,
+                    status=status,
+                )
+            )
 
         return sorted(result, key=lambda e: e.version, reverse=True)
 

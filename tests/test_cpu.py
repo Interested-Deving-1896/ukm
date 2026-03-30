@@ -7,7 +7,9 @@ from ukm.core.cpu import (
     recommended_xanmod_level,
     xanmod_level_description,
     cpu_summary,
-    _V2_FLAGS, _V3_FLAGS, _V4_FLAGS,
+    _V2_FLAGS,
+    _V3_FLAGS,
+    _V4_FLAGS,
 )
 
 
@@ -16,7 +18,6 @@ def _patch_flags(flags: set):
 
 
 class TestXanModLevelDetection:
-
     def test_v1_no_flags(self):
         with _patch_flags(set()):
             assert recommended_xanmod_level() == "v1"
@@ -47,7 +48,6 @@ class TestXanModLevelDetection:
 
 
 class TestDescriptions:
-
     def test_all_levels_have_descriptions(self):
         for level in ("v1", "v2", "v3", "v4"):
             desc = xanmod_level_description(level)
@@ -58,7 +58,6 @@ class TestDescriptions:
 
 
 class TestCpuSummary:
-
     def test_summary_keys(self):
         with _patch_flags(_V2_FLAGS | _V3_FLAGS):
             summary = cpu_summary()

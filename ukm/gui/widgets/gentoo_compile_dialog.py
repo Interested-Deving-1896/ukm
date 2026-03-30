@@ -10,8 +10,17 @@ from __future__ import annotations
 from ukm.core.providers.gentoo import GentooProvider
 from ukm.gui.widgets.log_panel import LogPanel
 from ukm.qt import (
-    QCheckBox, QComboBox, QDialog, QHBoxLayout, QLabel,
-    QPushButton, QSizePolicy, QThread, QVBoxLayout, Signal, Slot,
+    QCheckBox,
+    QComboBox,
+    QDialog,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QSizePolicy,
+    QThread,
+    QVBoxLayout,
+    Signal,
+    Slot,
 )
 
 
@@ -37,7 +46,6 @@ class _CompileWorker(QThread):
 
 
 class GentooCompileDialog(QDialog):
-
     def __init__(self, provider: GentooProvider, parent=None) -> None:
         super().__init__(parent)
         self._provider = provider
@@ -66,6 +74,7 @@ class GentooCompileDialog(QDialog):
         row2.addWidget(QLabel("Jobs:"))
         self._jobs_combo = QComboBox()
         import os
+
         cpus = os.cpu_count() or 1
         self._jobs_combo.addItem("Auto", 0)
         for j in range(1, cpus + 1):
@@ -96,8 +105,10 @@ class GentooCompileDialog(QDialog):
             self._src_combo.addItem(s, s)
         if not sources:
             self._compile_btn.setEnabled(False)
-            self._log.append("No kernel source trees found under /usr/src/.\n"
-                             "Install a *-sources package first.\n")
+            self._log.append(
+                "No kernel source trees found under /usr/src/.\n"
+                "Install a *-sources package first.\n"
+            )
 
     def _start_compile(self) -> None:
         src = self._src_combo.currentData()

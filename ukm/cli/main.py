@@ -140,28 +140,31 @@ def main(argv: list[str] | None = None) -> int:
 # Command implementations
 # ---------------------------------------------------------------------------
 
+
 def _dkms_summary() -> str:
     from ukm.core.dkms import status_summary
+
     return status_summary()
 
 
 def cmd_info(mgr: KernelManager) -> int:
     info = system_info()
     from ukm.core.cpu import recommended_xanmod_level
+
     xanmod_level = recommended_xanmod_level() if info.arch == "amd64" else "n/a"
     data = {
-        "distro":                  info.distro.name,
-        "distro_id":               info.distro.id,
-        "distro_family":           info.distro.family.value,
-        "arch":                    info.arch,
-        "arch_raw":                info.arch_raw,
-        "package_manager":         info.package_manager.value,
-        "running_kernel":          info.running_kernel,
-        "secure_boot":             info.has_secure_boot,
-        "pkexec":                  info.has_pkexec,
-        "sudo":                    info.has_sudo,
-        "recommended_xanmod":      xanmod_level,
-        "dkms":                    _dkms_summary(),
+        "distro": info.distro.name,
+        "distro_id": info.distro.id,
+        "distro_family": info.distro.family.value,
+        "arch": info.arch,
+        "arch_raw": info.arch_raw,
+        "package_manager": info.package_manager.value,
+        "running_kernel": info.running_kernel,
+        "secure_boot": info.has_secure_boot,
+        "pkexec": info.has_pkexec,
+        "sudo": info.has_sudo,
+        "recommended_xanmod": xanmod_level,
+        "dkms": _dkms_summary(),
     }
     if out._json_mode:
         out.print_json(data)
@@ -176,24 +179,29 @@ def cmd_providers(mgr: KernelManager) -> int:
     rows = []
     for p in mgr.providers:
         avail = p.is_available()
-        rows.append({
-            "id":           p.id,
-            "name":         p.display_name,
-            "family":       p.family.value,
-            "arches":       ", ".join(p.supported_arches),
-            "available":    "yes" if avail else "no",
-            "reason":       "" if avail else p.availability_reason(),
-        })
+        rows.append(
+            {
+                "id": p.id,
+                "name": p.display_name,
+                "family": p.family.value,
+                "arches": ", ".join(p.supported_arches),
+                "available": "yes" if avail else "no",
+                "reason": "" if avail else p.availability_reason(),
+            }
+        )
     if out._json_mode:
         out.print_json(rows)
     else:
-        out.print_table(rows, [
-            ("id",        "ID"),
-            ("name",      "Name"),
-            ("family",    "Family"),
-            ("arches",    "Arches"),
-            ("available", "Available"),
-        ])
+        out.print_table(
+            rows,
+            [
+                ("id", "ID"),
+                ("name", "Name"),
+                ("family", "Family"),
+                ("arches", "Arches"),
+                ("available", "Available"),
+            ],
+        )
         for r in rows:
             if r["reason"]:
                 out.warn(f"{r['id']}: {r['reason']}")
@@ -212,8 +220,9 @@ def cmd_list(mgr: KernelManager, args: dict) -> int:
             family = KernelFamily(family_str.lower())
             entries = [e for e in entries if e.family == family]
         except ValueError:
-            out.error(f"Unknown family '{family_str}'. "
-                      f"Valid: {', '.join(f.value for f in KernelFamily)}")
+            out.error(
+                f"Unknown family '{family_str}'. Valid: {', '.join(f.value for f in KernelFamily)}"
+            )
             return 1
 
     if installed_only:
@@ -224,16 +233,19 @@ def cmd_list(mgr: KernelManager, args: dict) -> int:
     if out._json_mode:
         out.print_json(rows)
     else:
-        out.print_table(rows, [
-            ("version",  "Version"),
-            ("flavor",   "Flavor"),
-            ("family",   "Family"),
-            ("arch",     "Arch"),
-            ("status",   "Status"),
-            ("held",     "Held"),
-            ("provider", "Provider"),
-            ("notes",    "Notes"),
-        ])
+        out.print_table(
+            rows,
+            [
+                ("version", "Version"),
+                ("flavor", "Flavor"),
+                ("family", "Family"),
+                ("arch", "Arch"),
+                ("status", "Status"),
+                ("held", "Held"),
+                ("provider", "Provider"),
+                ("notes", "Notes"),
+            ],
+        )
         out.info(f"\n  {len(entries)} kernel(s) listed.")
     return 0
 
@@ -369,6 +381,7 @@ def cmd_note(mgr: KernelManager, args: dict) -> int:
 
 def cmd_cpu() -> int:
     from ukm.core.cpu import cpu_summary
+
     data = cpu_summary()
     if out._json_mode:
         out.print_json(data)
@@ -384,9 +397,10 @@ def cmd_cpu() -> int:
 
 def cmd_changelog(mgr: KernelManager, args: dict) -> int:
     from ukm.core.changelog import fetch
-    version    = args["<version>"]
+
+    version = args["<version>"]
     provider_id = args.get("--provider") or ""
-    flavor     = args.get("--flavor") or ""
+    flavor = args.get("--flavor") or ""
 
     # Try to resolve provider_id from the kernel list if not given
     if not provider_id:
@@ -414,6 +428,7 @@ def cmd_changelog(mgr: KernelManager, args: dict) -> int:
 
 def cmd_dkms() -> int:
     from ukm.core import dkms
+
     if not dkms.is_available():
         out.warn("dkms is not installed. Install it to enable automatic module rebuilds.")
         return 0
@@ -423,29 +438,33 @@ def cmd_dkms() -> int:
         return 0
     rows = [
         {
-            "name":    m.name,
+            "name": m.name,
             "version": m.version,
-            "kernel":  m.kernel,
-            "arch":    m.arch,
-            "status":  m.status,
+            "kernel": m.kernel,
+            "arch": m.arch,
+            "status": m.status,
         }
         for m in modules
     ]
     if out._json_mode:
         out.print_json(rows)
     else:
-        out.print_table(rows, [
-            ("name",    "Module"),
-            ("version", "Version"),
-            ("kernel",  "Kernel"),
-            ("arch",    "Arch"),
-            ("status",  "Status"),
-        ])
+        out.print_table(
+            rows,
+            [
+                ("name", "Module"),
+                ("version", "Version"),
+                ("kernel", "Kernel"),
+                ("arch", "Arch"),
+                ("status", "Status"),
+            ],
+        )
     return 0
 
 
 def cmd_notify(args: dict) -> int:
     from ukm.core.notify import check_and_notify
+
     provider_id = args.get("--provider") or "mainline_ppa"
     sent = check_and_notify(provider_id=provider_id)
     if sent:
@@ -511,9 +530,8 @@ def cmd_notify_disable() -> int:
 
 def cmd_gentoo(mgr: KernelManager, args: dict) -> int:
     from ukm.core.providers.gentoo import GentooProvider
-    provider = next(
-        (p for p in mgr.providers if isinstance(p, GentooProvider)), None
-    )
+
+    provider = next((p for p in mgr.providers if isinstance(p, GentooProvider)), None)
     if provider is None:
         out.error("Gentoo provider is not available on this system.")
         return 1
@@ -554,16 +572,17 @@ def cmd_gentoo(mgr: KernelManager, args: dict) -> int:
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _entry_to_row(e: KernelEntry) -> dict:
     return {
-        "version":  str(e.version),
-        "flavor":   e.flavor,
-        "family":   e.family.value,
-        "arch":     e.arch,
-        "status":   e.status.name.lower(),
-        "held":     "yes" if e.held else "",
+        "version": str(e.version),
+        "flavor": e.flavor,
+        "family": e.family.value,
+        "arch": e.arch,
+        "status": e.status.name.lower(),
+        "held": "yes" if e.held else "",
         "provider": e.provider_id,
-        "notes":    e.notes[:40] + "…" if len(e.notes) > 40 else e.notes,
+        "notes": e.notes[:40] + "…" if len(e.notes) > 40 else e.notes,
     }
 
 
@@ -575,7 +594,8 @@ def _find_entry(
 ) -> KernelEntry | None:
     entries = mgr.list_all()
     candidates = [
-        e for e in entries
+        e
+        for e in entries
         if version in str(e.version)
         and (not provider_id or e.provider_id == provider_id)
         and (not flavor or e.flavor == flavor)

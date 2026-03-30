@@ -16,7 +16,6 @@ def make_backend():
 
 
 class TestAURProvider:
-
     def test_id(self):
         assert AURProvider(make_backend()).id == "aur"
 
@@ -44,7 +43,9 @@ class TestAURProvider:
     def test_not_available_without_pacman(self, _):
         assert not AURProvider(make_backend()).is_available()
 
-    @mock.patch("shutil.which", side_effect=lambda x: "/usr/bin/" + x if x in ("pacman", "yay") else None)
+    @mock.patch(
+        "shutil.which", side_effect=lambda x: "/usr/bin/" + x if x in ("pacman", "yay") else None
+    )
     def test_available_with_pacman_and_yay(self, _):
         assert AURProvider(make_backend()).is_available()
 
@@ -54,6 +55,7 @@ class TestAURProvider:
         mock_si.return_value.running_kernel = ""
 
         backend = make_backend()
+
         # Simulate linux-cachyos installed
         def run_side(cmd, **kwargs):
             if "pacman" in cmd and "-Q" in cmd and "linux-cachyos" in cmd:
@@ -61,6 +63,7 @@ class TestAURProvider:
             if "yay" in cmd and "-Si" in cmd:
                 return (0, "Version : 6.9.0.cachyos1-1\n", "")
             return (1, "", "")
+
         backend._run.side_effect = run_side
 
         p = AURProvider(backend)
@@ -71,9 +74,8 @@ class TestAURProvider:
 
     def test_aur_rpc_version(self):
         import json
-        fake_response = json.dumps({
-            "results": [{"Version": "6.9.0.cachyos1-1"}]
-        }).encode()
+
+        fake_response = json.dumps({"results": [{"Version": "6.9.0.cachyos1-1"}]}).encode()
 
         with mock.patch("urllib.request.urlopen") as mock_open:
             mock_resp = mock.MagicMock()

@@ -15,20 +15,20 @@ from functools import total_ordering
 
 
 class KernelStatus(Enum):
-    AVAILABLE   = auto()   # known but not installed
-    INSTALLED   = auto()   # installed, not running
-    RUNNING     = auto()   # currently running
-    HELD        = auto()   # installed + held/pinned (won't be auto-upgraded/removed)
+    AVAILABLE = auto()  # known but not installed
+    INSTALLED = auto()  # installed, not running
+    RUNNING = auto()  # currently running
+    HELD = auto()  # installed + held/pinned (won't be auto-upgraded/removed)
 
 
 class KernelFamily(Enum):
-    MAINLINE    = "mainline"    # Ubuntu Mainline PPA
-    XANMOD      = "xanmod"      # XanMod performance kernels
-    LIQUORIX    = "liquorix"    # Liquorix low-latency kernels
-    DISTRO      = "distro"      # Distribution-native kernel packages
-    GENTOO      = "gentoo"      # Gentoo portage / source-compiled
-    LOCAL       = "local"       # Locally supplied .deb/.rpm/.pkg.tar.zst
-    CUSTOM      = "custom"      # User-defined provider
+    MAINLINE = "mainline"  # Ubuntu Mainline PPA
+    XANMOD = "xanmod"  # XanMod performance kernels
+    LIQUORIX = "liquorix"  # Liquorix low-latency kernels
+    DISTRO = "distro"  # Distribution-native kernel packages
+    GENTOO = "gentoo"  # Gentoo portage / source-compiled
+    LOCAL = "local"  # Locally supplied .deb/.rpm/.pkg.tar.zst
+    CUSTOM = "custom"  # User-defined provider
 
 
 @total_ordering
@@ -40,12 +40,13 @@ class KernelVersion:
 
     Ordering: release > rc > pre  (e.g. 6.9.0 > 6.9.0-rc3 > 6.9.0-rc1)
     """
+
     raw: str
     major: int = field(init=False)
     minor: int = field(init=False)
     patch: int = field(init=False)
-    pre: str | None = field(init=False)   # "rc3", "pre1", None
-    suffix: str = field(init=False)          # everything after the numeric part
+    pre: str | None = field(init=False)  # "rc3", "pre1", None
+    suffix: str = field(init=False)  # everything after the numeric part
 
     _RC_RE = re.compile(r"^(\d+)\.(\d+)(?:\.(\d+))?(?:-(rc\d+|pre\d+))?(.*)$", re.I)
 
@@ -60,7 +61,7 @@ class KernelVersion:
         self.major = int(m.group(1))
         self.minor = int(m.group(2))
         self.patch = int(m.group(3) or 0)
-        self.pre   = m.group(4).lower() if m.group(4) else None
+        self.pre = m.group(4).lower() if m.group(4) else None
         self.suffix = m.group(5) or ""
 
     def _pre_key(self) -> tuple[int, int]:
@@ -76,14 +77,22 @@ class KernelVersion:
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, KernelVersion):
             return NotImplemented
-        return (self.major, self.minor, self.patch, self._pre_key()) == \
-               (other.major, other.minor, other.patch, other._pre_key())
+        return (self.major, self.minor, self.patch, self._pre_key()) == (
+            other.major,
+            other.minor,
+            other.patch,
+            other._pre_key(),
+        )
 
     def __lt__(self, other: KernelVersion) -> bool:
         if not isinstance(other, KernelVersion):
             return NotImplemented
-        return (self.major, self.minor, self.patch, self._pre_key()) < \
-               (other.major, other.minor, other.patch, other._pre_key())
+        return (self.major, self.minor, self.patch, self._pre_key()) < (
+            other.major,
+            other.minor,
+            other.patch,
+            other._pre_key(),
+        )
 
     def __hash__(self) -> int:
         return hash((self.major, self.minor, self.patch, self.pre))
@@ -99,25 +108,26 @@ class KernelEntry:
 
     Produced by KernelProvider.list() and consumed everywhere else.
     """
+
     # Identity
-    version:     KernelVersion
-    family:      KernelFamily
-    provider_id: str                    # e.g. "mainline_ppa", "xanmod", "apt"
-    arch:        str                    # e.g. "amd64", "arm64", "x86_64"
+    version: KernelVersion
+    family: KernelFamily
+    provider_id: str  # e.g. "mainline_ppa", "xanmod", "apt"
+    arch: str  # e.g. "amd64", "arm64", "x86_64"
 
     # Display
-    flavor:      str = ""               # e.g. "generic", "lowlatency", "rt", "v3"
+    flavor: str = ""  # e.g. "generic", "lowlatency", "rt", "v3"
     description: str = ""
 
     # State
-    status:      KernelStatus = KernelStatus.AVAILABLE
-    held:        bool = False
+    status: KernelStatus = KernelStatus.AVAILABLE
+    held: bool = False
 
     # Metadata
-    size_bytes:  int | None = None
-    checksum:    str | None = None   # sha256 hex
-    source_url:  str | None = None
-    notes:       str = ""
+    size_bytes: int | None = None
+    checksum: str | None = None  # sha256 hex
+    source_url: str | None = None
+    notes: str = ""
 
     @property
     def display_name(self) -> str:

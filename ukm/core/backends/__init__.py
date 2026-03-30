@@ -16,11 +16,11 @@ from ukm.core.backends.zypper import ZypperBackend
 from ukm.core.system import PackageManagerKind, system_info
 
 _BACKEND_MAP: dict[PackageManagerKind, type[PackageBackend]] = {
-    PackageManagerKind.APT:     AptBackend,
-    PackageManagerKind.PACMAN:  PacmanBackend,
-    PackageManagerKind.DNF:     DnfBackend,
-    PackageManagerKind.ZYPPER:  ZypperBackend,
-    PackageManagerKind.APK:     ApkBackend,
+    PackageManagerKind.APT: AptBackend,
+    PackageManagerKind.PACMAN: PacmanBackend,
+    PackageManagerKind.DNF: DnfBackend,
+    PackageManagerKind.ZYPPER: ZypperBackend,
+    PackageManagerKind.APK: ApkBackend,
     PackageManagerKind.PORTAGE: PortageBackend,
 }
 

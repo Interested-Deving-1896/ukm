@@ -16,7 +16,6 @@ def make_result(rc=0, stdout="", stderr=""):
 
 @mock.patch("shutil.which", return_value="/usr/bin/apt-get")
 class TestAptBackend:
-
     def test_is_available(self, _which):
         assert AptBackend().is_available()
 

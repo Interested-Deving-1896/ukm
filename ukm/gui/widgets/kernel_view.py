@@ -11,10 +11,19 @@ from __future__ import annotations
 from ukm.core.kernel import KernelEntry, KernelFamily, KernelStatus
 from ukm.gui.kernel_model import KernelTableModel
 from ukm.qt import (
-    Qt, QWidget, QVBoxLayout, QHBoxLayout,
-    QTableView, QHeaderView, QLineEdit, QComboBox,
-    QLabel, QSortFilterProxyModel, QAbstractItemView,
-    QMenu, Signal,
+    Qt,
+    QWidget,
+    QVBoxLayout,
+    QHBoxLayout,
+    QTableView,
+    QHeaderView,
+    QLineEdit,
+    QComboBox,
+    QLabel,
+    QSortFilterProxyModel,
+    QAbstractItemView,
+    QMenu,
+    Signal,
 )
 
 
@@ -38,9 +47,7 @@ class KernelFilterProxy(QSortFilterProxyModel):
 
     def filterAcceptsRow(self, source_row: int, source_parent) -> bool:
         model = self.sourceModel()
-        entry: KernelEntry | None = model.data(
-            model.index(source_row, 0), Qt.ItemDataRole.UserRole
-        )
+        entry: KernelEntry | None = model.data(model.index(source_row, 0), Qt.ItemDataRole.UserRole)
         if entry is None:
             return True
 
@@ -59,16 +66,16 @@ class KernelView(QWidget):
     Emits signals when the user requests actions.
     """
 
-    install_requested  = Signal(object)   # KernelEntry
-    remove_requested   = Signal(object)
-    hold_requested     = Signal(object)
-    unhold_requested   = Signal(object)
-    note_requested     = Signal(object)
-    refresh_requested  = Signal()
+    install_requested = Signal(object)  # KernelEntry
+    remove_requested = Signal(object)
+    hold_requested = Signal(object)
+    unhold_requested = Signal(object)
+    note_requested = Signal(object)
+    refresh_requested = Signal()
 
     def __init__(
         self,
-        family_filter: str = "",   # lock to a specific family (for tabs)
+        family_filter: str = "",  # lock to a specific family (for tabs)
         parent=None,
     ) -> None:
         super().__init__(parent)
@@ -140,9 +147,7 @@ class KernelView(QWidget):
         self._table.setAlternatingRowColors(True)
         self._table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self._table.verticalHeader().setVisible(False)
-        self._table.horizontalHeader().setSectionResizeMode(
-            QHeaderView.ResizeMode.ResizeToContents
-        )
+        self._table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         self._table.horizontalHeader().setStretchLastSection(True)
         self._table.sortByColumn(0, Qt.SortOrder.DescendingOrder)
         self._table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)

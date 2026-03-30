@@ -21,7 +21,7 @@ import urllib.request
 from pathlib import Path
 
 _CACHE_DIR = Path.home() / ".cache" / "ukm" / "changelogs"
-_TIMEOUT   = 10
+_TIMEOUT = 10
 
 
 def fetch(provider_id: str, version: str, flavor: str = "") -> str:
@@ -44,11 +44,11 @@ def fetch(provider_id: str, version: str, flavor: str = "") -> str:
 def _fetch_remote(provider_id: str, version: str, flavor: str) -> str:
     fetchers = {
         "mainline_ppa": _fetch_mainline,
-        "xanmod":       _fetch_xanmod,
-        "liquorix":     _fetch_liquorix,
-        "distro_native":_fetch_distro_native,
-        "aur":          _fetch_aur,
-        "gentoo":       _fetch_gentoo,
+        "xanmod": _fetch_xanmod,
+        "liquorix": _fetch_liquorix,
+        "distro_native": _fetch_distro_native,
+        "aur": _fetch_aur,
+        "gentoo": _fetch_gentoo,
     }
     fn = fetchers.get(provider_id)
     if fn is None:
@@ -62,6 +62,7 @@ def _fetch_remote(provider_id: str, version: str, flavor: str) -> str:
 # ---------------------------------------------------------------------------
 # Per-provider fetchers
 # ---------------------------------------------------------------------------
+
 
 def _fetch_mainline(version: str, flavor: str) -> str:
     """Fetch CHANGES file from the Ubuntu Mainline PPA."""
@@ -84,10 +85,10 @@ def _fetch_xanmod(version: str, flavor: str) -> str:
             html = r.read().decode("utf-8", errors="replace")
         # Extract the section relevant to this version
         import re
+
         # Find paragraphs mentioning the version
         matches = re.findall(
-            rf"(?:^|\n)([^\n]*{re.escape(version)}[^\n]*(?:\n(?!^[A-Z]).*)*)",
-            html, re.MULTILINE
+            rf"(?:^|\n)([^\n]*{re.escape(version)}[^\n]*(?:\n(?!^[A-Z]).*)*)", html, re.MULTILINE
         )
         if matches:
             return "\n".join(matches[:10])
@@ -157,8 +158,9 @@ def _fetch_aur(version: str, flavor: str) -> str:
         with urllib.request.urlopen(url, timeout=_TIMEOUT) as r:
             html = r.read().decode("utf-8", errors="replace")
         import re
+
         # Extract commit messages from cgit HTML
-        msgs = re.findall(r'<td class=\'subject\'><a[^>]+>([^<]+)</a>', html)
+        msgs = re.findall(r"<td class=\'subject\'><a[^>]+>([^<]+)</a>", html)
         if msgs:
             return "\n".join(f"• {m}" for m in msgs[:20])
         return f"See https://aur.archlinux.org/packages/{pkg} for details."
@@ -169,14 +171,12 @@ def _fetch_aur(version: str, flavor: str) -> str:
 def _fetch_gentoo(version: str, flavor: str) -> str:
     """Fetch Gentoo kernel package commit log from gitweb."""
     pkg = flavor or "gentoo-sources"
-    url = (
-        f"https://gitweb.gentoo.org/repo/gentoo.git/log/sys-kernel/{pkg}"
-        f"?qt=grep&q={version}"
-    )
+    url = f"https://gitweb.gentoo.org/repo/gentoo.git/log/sys-kernel/{pkg}?qt=grep&q={version}"
     try:
         with urllib.request.urlopen(url, timeout=_TIMEOUT) as r:
             html = r.read().decode("utf-8", errors="replace")
         import re
+
         msgs = re.findall(r'<td class="subject"><a[^>]+>([^<]+)</a>', html)
         if msgs:
             return "\n".join(f"• {m}" for m in msgs[:20])
@@ -188,6 +188,7 @@ def _fetch_gentoo(version: str, flavor: str) -> str:
 # ---------------------------------------------------------------------------
 # Cache management
 # ---------------------------------------------------------------------------
+
 
 def clear_cache(provider_id: str | None = None) -> int:
     """Clear cached changelogs. Returns number of files removed."""

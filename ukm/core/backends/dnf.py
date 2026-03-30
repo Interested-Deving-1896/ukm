@@ -11,7 +11,6 @@ from ukm.core.system import privilege_escalation_cmd
 
 
 class DnfBackend(PackageBackend):
-
     @property
     def name(self) -> str:
         return "dnf"
@@ -23,31 +22,21 @@ class DnfBackend(PackageBackend):
         return self._run(privilege_escalation_cmd() + ["dnf", "makecache", "-q", "-y"])
 
     def install(self, packages: list[str]) -> tuple[int, str, str]:
-        return self._run(
-            privilege_escalation_cmd() + ["dnf", "install", "-y"] + packages
-        )
+        return self._run(privilege_escalation_cmd() + ["dnf", "install", "-y"] + packages)
 
     def install_local(self, paths: list[str]) -> tuple[int, str, str]:
-        return self._run(
-            privilege_escalation_cmd() + ["dnf", "install", "-y"] + paths
-        )
+        return self._run(privilege_escalation_cmd() + ["dnf", "install", "-y"] + paths)
 
     def remove(self, packages: list[str], purge: bool = False) -> tuple[int, str, str]:
         # DNF remove always cleans config; purge flag is a no-op here
-        return self._run(
-            privilege_escalation_cmd() + ["dnf", "remove", "-y"] + packages
-        )
+        return self._run(privilege_escalation_cmd() + ["dnf", "remove", "-y"] + packages)
 
     def hold(self, packages: list[str]) -> tuple[int, str, str]:
         """Use dnf versionlock to pin packages."""
-        return self._run(
-            privilege_escalation_cmd() + ["dnf", "versionlock", "add"] + packages
-        )
+        return self._run(privilege_escalation_cmd() + ["dnf", "versionlock", "add"] + packages)
 
     def unhold(self, packages: list[str]) -> tuple[int, str, str]:
-        return self._run(
-            privilege_escalation_cmd() + ["dnf", "versionlock", "delete"] + packages
-        )
+        return self._run(privilege_escalation_cmd() + ["dnf", "versionlock", "delete"] + packages)
 
     def is_installed(self, package: str) -> bool:
         rc, _, _ = self._run(["rpm", "-q", package])

@@ -21,15 +21,16 @@ from pathlib import Path
 
 from ukm.core.system import system_info
 
-_STATE_FILE  = Path.home() / ".config" / "ukm" / "notify_state.json"
-_COOLDOWN_H  = 24   # minimum hours between repeat notifications for the same version
-_APP_NAME    = "ukm"
-_ICON        = "system-software-update"
+_STATE_FILE = Path.home() / ".config" / "ukm" / "notify_state.json"
+_COOLDOWN_H = 24  # minimum hours between repeat notifications for the same version
+_APP_NAME = "ukm"
+_ICON = "system-software-update"
 
 
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+
 
 def check_and_notify(provider_id: str = "mainline_ppa") -> bool:
     """
@@ -48,8 +49,7 @@ def check_and_notify(provider_id: str = "mainline_ppa") -> bool:
     # Find the latest available (not installed) kernel from the given provider
     entries = mgr.list_all(refresh=True)
     available = [
-        e for e in entries
-        if e.provider_id == provider_id and not e.is_installed and not e.held
+        e for e in entries if e.provider_id == provider_id and not e.is_installed and not e.held
     ]
     if not available:
         return False
@@ -62,7 +62,7 @@ def check_and_notify(provider_id: str = "mainline_ppa") -> bool:
     # Check cooldown
     state = _load_notify_state()
     last_notified_ver = state.get("last_version", "")
-    last_notified_at  = state.get("last_notified_at", "")
+    last_notified_at = state.get("last_notified_at", "")
 
     if last_notified_ver == str(latest.version) and last_notified_at:
         try:
@@ -92,7 +92,7 @@ def check_and_notify(provider_id: str = "mainline_ppa") -> bool:
 def send_notification(
     summary: str,
     body: str = "",
-    urgency: str = "normal",   # low | normal | critical
+    urgency: str = "normal",  # low | normal | critical
     timeout_ms: int = 10000,
 ) -> bool:
     """
@@ -104,8 +104,10 @@ def send_notification(
 
     cmd = [
         "notify-send",
-        "--app-name", _APP_NAME,
-        "--icon", _ICON,
+        "--app-name",
+        _APP_NAME,
+        "--icon",
+        _ICON,
         f"--urgency={urgency}",
         f"--expire-time={timeout_ms}",
         summary,
@@ -124,6 +126,7 @@ def send_notification(
 # State helpers
 # ---------------------------------------------------------------------------
 
+
 def _load_notify_state() -> dict:
     if _STATE_FILE.exists():
         try:
@@ -136,6 +139,6 @@ def _load_notify_state() -> dict:
 def _save_notify_state(version: str) -> None:
     _STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
     state = _load_notify_state()
-    state["last_version"]     = version
+    state["last_version"] = version
     state["last_notified_at"] = datetime.now().isoformat()
     _STATE_FILE.write_text(json.dumps(state, indent=2))

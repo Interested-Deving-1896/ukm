@@ -32,7 +32,6 @@ _PPA_ARCHES = ["amd64", "arm64", "armhf", "ppc64el", "s390x", "i386"]
 
 
 class MainlinePPAProvider(KernelProvider):
-
     @property
     def id(self) -> str:
         return "mainline_ppa"
@@ -52,6 +51,7 @@ class MainlinePPAProvider(KernelProvider):
     def is_available(self) -> bool:
         # Requires dpkg (Debian-family) and network access
         import shutil
+
         return bool(shutil.which("dpkg"))
 
     def availability_reason(self) -> str:
@@ -71,9 +71,7 @@ class MainlinePPAProvider(KernelProvider):
 
         if refresh or not index_cache.exists():
             result = self._fetch_index(arch)
-            index_cache.write_text(json.dumps(
-                [self._entry_to_dict(e) for e in result], indent=2
-            ))
+            index_cache.write_text(json.dumps([self._entry_to_dict(e) for e in result], indent=2))
         else:
             raw = json.loads(index_cache.read_text())
             result = [self._dict_to_entry(d, arch) for d in raw]
@@ -137,6 +135,7 @@ class MainlinePPAProvider(KernelProvider):
 
             yield "Installing packages...\n"
             from ukm.core.system import privilege_escalation_cmd
+
             install_cmd = privilege_escalation_cmd() + ["dpkg", "-i"] + [str(d) for d in debs]
             rc = 0
             for line in self._backend.stream(install_cmd):
@@ -161,7 +160,8 @@ class MainlinePPAProvider(KernelProvider):
 
         # Find all installed packages for this version
         pkgs = [
-            p for p in self._backend.installed_packages("linux-")
+            p
+            for p in self._backend.installed_packages("linux-")
             if ver.replace(".", ".") in p or ver in p
         ]
         if not pkgs:
@@ -183,18 +183,12 @@ class MainlinePPAProvider(KernelProvider):
 
     def hold(self, entry: KernelEntry) -> tuple[int, str, str]:
         ver = str(entry.version)
-        pkgs = [
-            p for p in self._backend.installed_packages("linux-")
-            if ver in p
-        ]
+        pkgs = [p for p in self._backend.installed_packages("linux-") if ver in p]
         return self._backend.hold(pkgs) if pkgs else (0, "Nothing to hold.", "")
 
     def unhold(self, entry: KernelEntry) -> tuple[int, str, str]:
         ver = str(entry.version)
-        pkgs = [
-            p for p in self._backend.installed_packages("linux-")
-            if ver in p
-        ]
+        pkgs = [p for p in self._backend.installed_packages("linux-") if ver in p]
         return self._backend.unhold(pkgs) if pkgs else (0, "Nothing to unhold.", "")
 
     # ------------------------------------------------------------------
@@ -211,19 +205,19 @@ class MainlinePPAProvider(KernelProvider):
         result: list[KernelEntry] = []
         for v in versions:
             ver_str = v.lstrip("v")
-            result.append(KernelEntry(
-                version=KernelVersion(ver_str),
-                family=self.family,
-                provider_id=self.id,
-                arch=arch,
-                flavor="generic",
-                source_url=f"{_PPA_BASE}{v}/",
-            ))
+            result.append(
+                KernelEntry(
+                    version=KernelVersion(ver_str),
+                    family=self.family,
+                    provider_id=self.id,
+                    arch=arch,
+                    flavor="generic",
+                    source_url=f"{_PPA_BASE}{v}/",
+                )
+            )
         return result
 
-    def _fetch_package_urls(
-        self, ppa_url: str, arch: str
-    ) -> tuple[list[str], dict[str, str]]:
+    def _fetch_package_urls(self, ppa_url: str, arch: str) -> tuple[list[str], dict[str, str]]:
         """
         Fetch the per-version index page and extract .deb URLs + checksums.
         Returns (urls, {filename: sha256}).
@@ -246,9 +240,7 @@ class MainlinePPAProvider(KernelProvider):
                 pass
 
         # Find .deb files for this arch
-        deb_pattern = re.compile(
-            rf'href="(linux-(?:image|headers|modules)[^"]*_{arch}\.deb)"'
-        )
+        deb_pattern = re.compile(rf'href="(linux-(?:image|headers|modules)[^"]*_{arch}\.deb)"')
         filenames = deb_pattern.findall(html)
         urls = [ppa_url + f for f in filenames]
         return urls, checksums

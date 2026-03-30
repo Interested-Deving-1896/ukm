@@ -25,11 +25,11 @@ from dataclasses import dataclass
 
 @dataclass
 class DkmsModule:
-    name:    str
+    name: str
     version: str
-    kernel:  str
-    arch:    str
-    status:  str   # "installed", "built", "added", "uninstalled", "broken"
+    kernel: str
+    arch: str
+    status: str  # "installed", "built", "added", "uninstalled", "broken"
 
 
 def is_available() -> bool:
@@ -47,7 +47,9 @@ def status() -> list[DkmsModule]:
 
     result = subprocess.run(
         ["dkms", "status"],
-        capture_output=True, text=True, timeout=30,
+        capture_output=True,
+        text=True,
+        timeout=30,
     )
     if result.returncode != 0:
         return []
@@ -61,17 +63,17 @@ def status() -> list[DkmsModule]:
         line = line.strip()
         if not line:
             continue
-        m = re.match(
-            r"^([^/,]+)[/,]\s*([^,]+),\s*([^,]+),\s*([^:]+):\s*(.+)$", line
-        )
+        m = re.match(r"^([^/,]+)[/,]\s*([^,]+),\s*([^,]+),\s*([^:]+):\s*(.+)$", line)
         if m:
-            modules.append(DkmsModule(
-                name=m.group(1).strip(),
-                version=m.group(2).strip(),
-                kernel=m.group(3).strip(),
-                arch=m.group(4).strip(),
-                status=m.group(5).strip(),
-            ))
+            modules.append(
+                DkmsModule(
+                    name=m.group(1).strip(),
+                    version=m.group(2).strip(),
+                    kernel=m.group(3).strip(),
+                    arch=m.group(4).strip(),
+                    status=m.group(5).strip(),
+                )
+            )
     return modules
 
 
@@ -101,9 +103,8 @@ def autoinstall(kernel_version: str) -> Iterator[str]:
     yield f"Rebuilding DKMS modules for kernel {kernel_version}...\n"
 
     from ukm.core.system import privilege_escalation_cmd
-    cmd = privilege_escalation_cmd() + [
-        "dkms", "autoinstall", "-k", kernel_version
-    ]
+
+    cmd = privilege_escalation_cmd() + ["dkms", "autoinstall", "-k", kernel_version]
 
     proc = subprocess.Popen(
         cmd,
@@ -143,6 +144,7 @@ def remove_kernel(kernel_version: str) -> Iterator[str]:
     yield f"Removing DKMS module builds for kernel {kernel_version}...\n"
 
     from ukm.core.system import privilege_escalation_cmd
+
     seen: set[tuple[str, str]] = set()
 
     for mod in mods:
@@ -152,8 +154,12 @@ def remove_kernel(kernel_version: str) -> Iterator[str]:
         seen.add(key)
 
         cmd = privilege_escalation_cmd() + [
-            "dkms", "remove", f"{mod.name}/{mod.version}",
-            "-k", kernel_version, "--all",
+            "dkms",
+            "remove",
+            f"{mod.name}/{mod.version}",
+            "-k",
+            kernel_version,
+            "--all",
         ]
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
         if result.returncode == 0:
@@ -171,7 +177,6 @@ def status_summary() -> str:
         return "no DKMS modules registered"
     broken = [m for m in mods if m.status in ("broken", "uninstalled")]
     installed = [m for m in mods if m.status == "installed"]
-    return (
-        f"{len(mods)} module(s): {len(installed)} installed"
-        + (f", {len(broken)} broken" if broken else "")
+    return f"{len(mods)} module(s): {len(installed)} installed" + (
+        f", {len(broken)} broken" if broken else ""
     )

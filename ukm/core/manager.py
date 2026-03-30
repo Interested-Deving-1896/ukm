@@ -22,7 +22,6 @@ _STATE_FILE = Path.home() / ".config" / "ukm" / "state.json"
 
 
 class KernelManager:
-
     def __init__(self, arch: str | None = None) -> None:
         self._arch = arch or system_info().arch
         self._providers: list[KernelProvider] = get_providers(self._arch)
@@ -87,21 +86,21 @@ class KernelManager:
         yield from provider.install(entry)
         # Rebuild DKMS modules for the newly installed kernel
         from ukm.core import dkms
+
         yield from dkms.autoinstall(str(entry.version))
 
     def remove(self, entry: KernelEntry, purge: bool = False) -> Iterator[str]:
         if entry.is_running:
             raise RuntimeError("Cannot remove the currently running kernel.")
         if entry.held:
-            raise RuntimeError(
-                f"Kernel {entry.display_name} is locked. Unlock it first."
-            )
+            raise RuntimeError(f"Kernel {entry.display_name} is locked. Unlock it first.")
         provider = self.provider(entry.provider_id)
         if provider is None:
             raise RuntimeError(f"Provider '{entry.provider_id}' not found.")
         yield from provider.remove(entry, purge=purge)
         # Clean up DKMS module builds for the removed kernel
         from ukm.core import dkms
+
         yield from dkms.remove_kernel(str(entry.version))
 
     # ------------------------------------------------------------------

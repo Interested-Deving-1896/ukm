@@ -11,7 +11,6 @@ from ukm.core.system import privilege_escalation_cmd
 
 
 class AptBackend(PackageBackend):
-
     @property
     def name(self) -> str:
         return "apt"
@@ -24,31 +23,30 @@ class AptBackend(PackageBackend):
 
     def install(self, packages: list[str]) -> tuple[int, str, str]:
         return self._run(
-            privilege_escalation_cmd() + [
-                "apt-get", "install", "-y", "--no-install-recommends",
-            ] + packages,
+            privilege_escalation_cmd()
+            + [
+                "apt-get",
+                "install",
+                "-y",
+                "--no-install-recommends",
+            ]
+            + packages,
             env={"DEBIAN_FRONTEND": "noninteractive"},
         )
 
     def install_local(self, paths: list[str]) -> tuple[int, str, str]:
-        return self._run(
-            privilege_escalation_cmd() + ["dpkg", "-i"] + paths
-        )
+        return self._run(privilege_escalation_cmd() + ["dpkg", "-i"] + paths)
 
     def remove(self, packages: list[str], purge: bool = False) -> tuple[int, str, str]:
         verb = "purge" if purge else "remove"
-        return self._run(
-            privilege_escalation_cmd() + ["apt-get", verb, "-y"] + packages
-        )
+        return self._run(privilege_escalation_cmd() + ["apt-get", verb, "-y"] + packages)
 
     def hold(self, packages: list[str]) -> tuple[int, str, str]:
         cmd = privilege_escalation_cmd() + ["apt-mark", "hold"] + packages
         return self._run(cmd)
 
     def unhold(self, packages: list[str]) -> tuple[int, str, str]:
-        return self._run(
-            privilege_escalation_cmd() + ["apt-mark", "unhold"] + packages
-        )
+        return self._run(privilege_escalation_cmd() + ["apt-mark", "unhold"] + packages)
 
     def is_installed(self, package: str) -> bool:
         rc, out, _ = self._run(["dpkg-query", "-W", "-f=${Status}", package])
@@ -87,9 +85,14 @@ class AptBackend(PackageBackend):
                 f.write(key_data)
                 key_path = f.name
             rc, out, err = self._run(
-                priv + ["gpg", "--dearmor", "-o",
-                        f"/usr/share/keyrings/ukm-{repo_line.split()[0]}.gpg",
-                        key_path]
+                priv
+                + [
+                    "gpg",
+                    "--dearmor",
+                    "-o",
+                    f"/usr/share/keyrings/ukm-{repo_line.split()[0]}.gpg",
+                    key_path,
+                ]
             )
             os.unlink(key_path)
             if rc != 0:

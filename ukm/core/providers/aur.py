@@ -29,34 +29,34 @@ _AUR_KERNELS = [
     "linux-tkg-pds",
     "linux-tkg-bmq",
     "linux-tkg-cfs",
-    "linux-lqx",           # Liquorix for Arch
-    "linux-xanmod",        # XanMod AUR variant
+    "linux-lqx",  # Liquorix for Arch
+    "linux-xanmod",  # XanMod AUR variant
     "linux-xanmod-lts",
     "linux-hardened-git",
     "linux-rt",
     "linux-rt-lts",
-    "linux-clear",         # Intel Clear Linux patches
-    "linux-nitrous",       # Nitrous kernel
+    "linux-clear",  # Intel Clear Linux patches
+    "linux-nitrous",  # Nitrous kernel
     "linux-zen-git",
 ]
 
 _AUR_DESCRIPTIONS = {
-    "linux-cachyos":          "CachyOS optimised kernel (BORE scheduler)",
-    "linux-cachyos-lts":      "CachyOS LTS kernel",
-    "linux-cachyos-bore":     "CachyOS BORE scheduler kernel",
+    "linux-cachyos": "CachyOS optimised kernel (BORE scheduler)",
+    "linux-cachyos-lts": "CachyOS LTS kernel",
+    "linux-cachyos-bore": "CachyOS BORE scheduler kernel",
     "linux-cachyos-bore-lts": "CachyOS BORE LTS kernel",
-    "linux-tkg-pds":          "TkG kernel with PDS scheduler",
-    "linux-tkg-bmq":          "TkG kernel with BMQ scheduler",
-    "linux-tkg-cfs":          "TkG kernel with CFS (stock scheduler)",
-    "linux-lqx":              "Liquorix low-latency kernel for Arch",
-    "linux-xanmod":           "XanMod performance kernel (AUR)",
-    "linux-xanmod-lts":       "XanMod LTS kernel (AUR)",
-    "linux-hardened-git":     "Hardened kernel (git)",
-    "linux-rt":               "PREEMPT_RT real-time kernel",
-    "linux-rt-lts":           "PREEMPT_RT LTS real-time kernel",
-    "linux-clear":            "Intel Clear Linux patches kernel",
-    "linux-nitrous":          "Nitrous kernel (optimised for modern CPUs)",
-    "linux-zen-git":          "Zen kernel (git)",
+    "linux-tkg-pds": "TkG kernel with PDS scheduler",
+    "linux-tkg-bmq": "TkG kernel with BMQ scheduler",
+    "linux-tkg-cfs": "TkG kernel with CFS (stock scheduler)",
+    "linux-lqx": "Liquorix low-latency kernel for Arch",
+    "linux-xanmod": "XanMod performance kernel (AUR)",
+    "linux-xanmod-lts": "XanMod LTS kernel (AUR)",
+    "linux-hardened-git": "Hardened kernel (git)",
+    "linux-rt": "PREEMPT_RT real-time kernel",
+    "linux-rt-lts": "PREEMPT_RT LTS real-time kernel",
+    "linux-clear": "Intel Clear Linux patches kernel",
+    "linux-nitrous": "Nitrous kernel (optimised for modern CPUs)",
+    "linux-zen-git": "Zen kernel (git)",
 }
 
 
@@ -69,7 +69,6 @@ def _aur_helper() -> str | None:
 
 
 class AURProvider(KernelProvider):
-
     @property
     def id(self) -> str:
         return "aur"
@@ -121,23 +120,27 @@ class AURProvider(KernelProvider):
                 continue
 
             is_run = running and (pkg in running or ver_str.split("-")[0] in running)
-            status = KernelStatus.RUNNING if is_run else (
-                KernelStatus.INSTALLED if is_inst else KernelStatus.AVAILABLE
+            status = (
+                KernelStatus.RUNNING
+                if is_run
+                else (KernelStatus.INSTALLED if is_inst else KernelStatus.AVAILABLE)
             )
             if self._backend.is_held(pkg):
                 status = KernelStatus.HELD
 
-            result.append(KernelEntry(
-                version=KernelVersion(ver_str),
-                family=self.family,
-                provider_id=self.id,
-                arch=arch,
-                flavor=pkg,
-                description=_AUR_DESCRIPTIONS.get(pkg, f"AUR: {pkg}"),
-                status=status,
-                held=self._backend.is_held(pkg),
-                source_url=f"https://aur.archlinux.org/packages/{pkg}",
-            ))
+            result.append(
+                KernelEntry(
+                    version=KernelVersion(ver_str),
+                    family=self.family,
+                    provider_id=self.id,
+                    arch=arch,
+                    flavor=pkg,
+                    description=_AUR_DESCRIPTIONS.get(pkg, f"AUR: {pkg}"),
+                    status=status,
+                    held=self._backend.is_held(pkg),
+                    source_url=f"https://aur.archlinux.org/packages/{pkg}",
+                )
+            )
 
         return sorted(result, key=lambda e: e.version, reverse=True)
 
@@ -156,9 +159,7 @@ class AURProvider(KernelProvider):
             yield f"Installing {pkg} via makepkg (no AUR helper found)...\n"
             makepkg_cmd = self._makepkg_cmd(pkg)
             if makepkg_cmd is None:
-                raise RuntimeError(
-                    f"Cannot install {pkg}: no AUR helper and makepkg clone failed."
-                )
+                raise RuntimeError(f"Cannot install {pkg}: no AUR helper and makepkg clone failed.")
             cmd = makepkg_cmd
 
         rc = 0
@@ -227,6 +228,7 @@ class AURProvider(KernelProvider):
         """Query the AUR RPC API for the latest version of a package."""
         import json
         import urllib.request
+
         url = f"https://aur.archlinux.org/rpc/v5/info?arg[]={pkg}"
         try:
             with urllib.request.urlopen(url, timeout=8) as r:

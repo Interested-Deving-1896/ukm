@@ -9,13 +9,22 @@ from __future__ import annotations
 
 from ukm.core.kernel import KernelEntry
 from ukm.qt import (
-    QFont, QHBoxLayout, QLabel, QPushButton, QSizePolicy,
-    QTextEdit, QThread, QVBoxLayout, QWidget, Signal, Slot,
+    QFont,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QSizePolicy,
+    QTextEdit,
+    QThread,
+    QVBoxLayout,
+    QWidget,
+    Signal,
+    Slot,
 )
 
 
 class _FetchWorker(QThread):
-    done  = Signal(str)
+    done = Signal(str)
     error = Signal(str)
 
     def __init__(self, entry: KernelEntry) -> None:
@@ -24,6 +33,7 @@ class _FetchWorker(QThread):
 
     def run(self) -> None:
         from ukm.core.changelog import fetch
+
         try:
             text = fetch(
                 self._entry.provider_id,
@@ -131,6 +141,7 @@ class ChangelogPanel(QWidget):
     def _on_refresh(self) -> None:
         if self._current_entry:
             from ukm.core.changelog import clear_cache
+
             clear_cache(self._current_entry.provider_id)
             self.show_entry(self._current_entry)
             # Force re-fetch by clearing the current entry reference

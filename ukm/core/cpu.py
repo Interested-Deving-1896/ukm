@@ -69,7 +69,7 @@ def cpu_summary() -> dict:
         "recommended_xanmod_level": level,
         "description": xanmod_level_description(level),
         "has_avx512": bool(_V4_FLAGS.issubset(flags)),
-        "has_avx2":   bool(_V3_FLAGS.issubset(flags)),
+        "has_avx2": bool(_V3_FLAGS.issubset(flags)),
         "has_sse4_2": bool(_V2_FLAGS.issubset(flags)),
         "flag_count": len(flags),
     }

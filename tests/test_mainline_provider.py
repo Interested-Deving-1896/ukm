@@ -26,7 +26,6 @@ _FAKE_INDEX_HTML = """
 
 
 class TestMainlinePPAProvider:
-
     def test_family(self):
         p = MainlinePPAProvider(make_backend())
         assert p.family == KernelFamily.MAINLINE
@@ -89,11 +88,10 @@ class TestMainlinePPAProvider:
             cache = Path(tmpdir) / "index.json"
             cache.write_text(json.dumps(fake_entries))
 
-            with mock.patch(
-                "ukm.core.providers.mainline_ppa._CACHE_DIR", Path(tmpdir)
-            ), mock.patch(
-                "ukm.core.providers.mainline_ppa.system_info"
-            ) as mock_si:
+            with (
+                mock.patch("ukm.core.providers.mainline_ppa._CACHE_DIR", Path(tmpdir)),
+                mock.patch("ukm.core.providers.mainline_ppa.system_info") as mock_si,
+            ):
                 mock_si.return_value.running_kernel = "6.9.0-061900-generic"
                 mock_si.return_value.arch = "amd64"
                 entries = p.list("amd64", refresh=False)
@@ -117,11 +115,10 @@ class TestMainlinePPAProvider:
             cache = Path(tmpdir) / "index.json"
             cache.write_text(json.dumps(fake_entries))
 
-            with mock.patch(
-                "ukm.core.providers.mainline_ppa._CACHE_DIR", Path(tmpdir)
-            ), mock.patch(
-                "ukm.core.providers.mainline_ppa.system_info"
-            ) as mock_si:
+            with (
+                mock.patch("ukm.core.providers.mainline_ppa._CACHE_DIR", Path(tmpdir)),
+                mock.patch("ukm.core.providers.mainline_ppa.system_info") as mock_si,
+            ):
                 mock_si.return_value.running_kernel = ""
                 mock_si.return_value.arch = "amd64"
                 entries = p.list("amd64", refresh=False)

@@ -19,7 +19,6 @@ def make_backend(pm_kind=PackageManagerKind.APT):
 
 
 class TestDistroNativeProvider:
-
     def test_family(self):
         p = DistroNativeProvider(make_backend())
         assert p.family == KernelFamily.DISTRO
@@ -32,11 +31,13 @@ class TestDistroNativeProvider:
 
     def test_apt_flavor_extraction(self):
         from ukm.core.providers.distro_native import DistroNativeProvider
+
         assert DistroNativeProvider._apt_flavor("linux-image-6.8.0-45-generic") == "generic"
         assert DistroNativeProvider._apt_flavor("linux-image-6.8.0-45-lowlatency") == "lowlatency"
 
     def test_apt_version_extraction(self):
         from ukm.core.providers.distro_native import DistroNativeProvider
+
         assert DistroNativeProvider._apt_pkg_version("linux-image-6.8.0-45-generic") == "6.8.0"
         assert DistroNativeProvider._apt_pkg_version("linux-image-generic") == ""
 

@@ -11,7 +11,9 @@ from ukm.core.kernel import KernelEntry, KernelFamily, KernelStatus, KernelVersi
 from ukm.core.manager import KernelManager
 
 
-def make_entry(version="6.9.0", status=KernelStatus.AVAILABLE, held=False, provider_id="mainline_ppa"):
+def make_entry(
+    version="6.9.0", status=KernelStatus.AVAILABLE, held=False, provider_id="mainline_ppa"
+):
     return KernelEntry(
         version=KernelVersion(version),
         family=KernelFamily.MAINLINE,
@@ -24,7 +26,6 @@ def make_entry(version="6.9.0", status=KernelStatus.AVAILABLE, held=False, provi
 
 
 class TestKernelManager:
-
     def _make_manager(self, entries=None, tmp_state=None):
         """Create a KernelManager with mocked providers and state file."""
         mgr = mock.MagicMock(spec=KernelManager)
@@ -34,8 +35,10 @@ class TestKernelManager:
         with tempfile.TemporaryDirectory() as tmpdir:
             state_file = Path(tmpdir) / "state.json"
 
-            with mock.patch("ukm.core.manager._STATE_FILE", state_file), \
-                 mock.patch("ukm.core.manager.get_providers", return_value=[]):
+            with (
+                mock.patch("ukm.core.manager._STATE_FILE", state_file),
+                mock.patch("ukm.core.manager.get_providers", return_value=[]),
+            ):
                 mgr = KernelManager()
                 entry = make_entry()
                 mgr.set_note(entry, "test note")
@@ -49,46 +52,58 @@ class TestKernelManager:
         with tempfile.TemporaryDirectory() as tmpdir:
             state_file = Path(tmpdir) / "state.json"
 
-            with mock.patch("ukm.core.manager._STATE_FILE", state_file), \
-                 mock.patch("ukm.core.manager.get_providers", return_value=[]):
+            with (
+                mock.patch("ukm.core.manager._STATE_FILE", state_file),
+                mock.patch("ukm.core.manager.get_providers", return_value=[]),
+            ):
                 mgr = KernelManager()
                 entry = make_entry()
                 mgr.set_note(entry, "persistent note")
 
             # Reload
-            with mock.patch("ukm.core.manager._STATE_FILE", state_file), \
-                 mock.patch("ukm.core.manager.get_providers", return_value=[]):
+            with (
+                mock.patch("ukm.core.manager._STATE_FILE", state_file),
+                mock.patch("ukm.core.manager.get_providers", return_value=[]),
+            ):
                 mgr2 = KernelManager()
                 assert mgr2.get_note(entry) == "persistent note"
 
     def test_remove_running_kernel_raises(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             state_file = Path(tmpdir) / "state.json"
-            with mock.patch("ukm.core.manager._STATE_FILE", state_file), \
-                 mock.patch("ukm.core.manager.get_providers", return_value=[]):
+            with (
+                mock.patch("ukm.core.manager._STATE_FILE", state_file),
+                mock.patch("ukm.core.manager.get_providers", return_value=[]),
+            ):
                 mgr = KernelManager()
                 entry = make_entry(status=KernelStatus.RUNNING)
                 import pytest
+
                 with pytest.raises(RuntimeError, match="running"):
                     list(mgr.remove(entry))
 
     def test_remove_held_kernel_raises(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             state_file = Path(tmpdir) / "state.json"
-            with mock.patch("ukm.core.manager._STATE_FILE", state_file), \
-                 mock.patch("ukm.core.manager.get_providers", return_value=[]):
+            with (
+                mock.patch("ukm.core.manager._STATE_FILE", state_file),
+                mock.patch("ukm.core.manager.get_providers", return_value=[]),
+            ):
                 mgr = KernelManager()
                 entry = make_entry(status=KernelStatus.INSTALLED, held=True)
                 import pytest
+
                 with pytest.raises(RuntimeError, match="locked"):
                     list(mgr.remove(entry))
 
     def test_secure_boot_warning_when_enabled(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             state_file = Path(tmpdir) / "state.json"
-            with mock.patch("ukm.core.manager._STATE_FILE", state_file), \
-                 mock.patch("ukm.core.manager.get_providers", return_value=[]), \
-                 mock.patch("ukm.core.manager.system_info") as mock_si:
+            with (
+                mock.patch("ukm.core.manager._STATE_FILE", state_file),
+                mock.patch("ukm.core.manager.get_providers", return_value=[]),
+                mock.patch("ukm.core.manager.system_info") as mock_si,
+            ):
                 mock_si.return_value.has_secure_boot = True
                 mgr = KernelManager()
                 assert mgr.secure_boot_warning() is not None
@@ -97,9 +112,11 @@ class TestKernelManager:
     def test_no_secure_boot_warning_when_disabled(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             state_file = Path(tmpdir) / "state.json"
-            with mock.patch("ukm.core.manager._STATE_FILE", state_file), \
-                 mock.patch("ukm.core.manager.get_providers", return_value=[]), \
-                 mock.patch("ukm.core.manager.system_info") as mock_si:
+            with (
+                mock.patch("ukm.core.manager._STATE_FILE", state_file),
+                mock.patch("ukm.core.manager.get_providers", return_value=[]),
+                mock.patch("ukm.core.manager.system_info") as mock_si,
+            ):
                 mock_si.return_value.has_secure_boot = False
                 mgr = KernelManager()
                 assert mgr.secure_boot_warning() is None
@@ -107,8 +124,10 @@ class TestKernelManager:
     def test_state_key_format(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             state_file = Path(tmpdir) / "state.json"
-            with mock.patch("ukm.core.manager._STATE_FILE", state_file), \
-                 mock.patch("ukm.core.manager.get_providers", return_value=[]):
+            with (
+                mock.patch("ukm.core.manager._STATE_FILE", state_file),
+                mock.patch("ukm.core.manager.get_providers", return_value=[]),
+            ):
                 mgr = KernelManager()
                 entry = make_entry()
                 key = mgr._state_key(entry)

@@ -16,7 +16,6 @@ def make_result(rc=0, stdout="", stderr=""):
 
 @mock.patch("shutil.which", return_value="/usr/bin/pacman")
 class TestPacmanBackend:
-
     def test_is_available(self, _which):
         assert PacmanBackend().is_available()
 

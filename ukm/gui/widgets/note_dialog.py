@@ -4,12 +4,15 @@ from __future__ import annotations
 
 from ukm.core.kernel import KernelEntry
 from ukm.qt import (
-    QDialog, QDialogButtonBox, QLabel, QTextEdit, QVBoxLayout,
+    QDialog,
+    QDialogButtonBox,
+    QLabel,
+    QTextEdit,
+    QVBoxLayout,
 )
 
 
 class NoteDialog(QDialog):
-
     def __init__(self, entry: KernelEntry, parent=None) -> None:
         super().__init__(parent)
         self.setWindowTitle(f"Note — {entry.display_name}")
@@ -24,8 +27,7 @@ class NoteDialog(QDialog):
         layout.addWidget(self._edit)
 
         buttons = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok |
-            QDialogButtonBox.StandardButton.Cancel
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
         )
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
