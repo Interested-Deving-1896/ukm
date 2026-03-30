@@ -4,9 +4,6 @@ from __future__ import annotations
 
 import unittest.mock as mock
 
-import pytest
-
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -505,7 +502,7 @@ class TestPackageBackendBase:
         proc.__exit__ = mock.MagicMock(return_value=False)
 
         with mock.patch("subprocess.Popen", return_value=proc):
-            lines = list(PackageBackend._run.__func__ if False else
+            list(PackageBackend._run.__func__ if False else
                          PackageBackend().stream(["echo", "hi"])
                          if False else [])
         # Just verify stream is callable without error via a real invocation

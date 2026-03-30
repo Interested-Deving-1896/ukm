@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import tempfile
 import unittest.mock as mock
-from pathlib import Path
 
 from ukm.core.kernel import KernelEntry, KernelFamily, KernelStatus, KernelVersion
 from ukm.core.providers.distro_native import DistroNativeProvider
@@ -320,7 +319,6 @@ class TestPacmanEditIgnorePkg:
         conf_content = "[options]\nIgnorePkg = linux-lts\n"
         with tempfile.NamedTemporaryFile(mode="w", suffix=".conf", delete=False) as f:
             f.write(conf_content)
-            conf_path = f.name
 
         p = self._make_pacman()
         with (

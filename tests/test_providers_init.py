@@ -5,11 +5,7 @@ from __future__ import annotations
 import unittest.mock as mock
 
 from ukm.core.providers import get_providers
-from ukm.core.providers.mainline_ppa import MainlinePPAProvider
 from ukm.core.providers.xanmod import XanModProvider
-from ukm.core.providers.liquorix import LiquorixProvider
-from ukm.core.providers.distro_native import DistroNativeProvider
-from ukm.core.providers.local_file import LocalFileProvider
 
 
 def _mock_apt_backend():
@@ -245,7 +241,7 @@ class TestXanModProviderExtra:
         assert len(result) >= 1
 
     def test_hold_delegates(self):
-        from ukm.core.kernel import KernelEntry, KernelVersion, KernelFamily
+        from ukm.core.kernel import KernelEntry, KernelFamily, KernelVersion
 
         b = mock.MagicMock()
         b.hold.return_value = (0, "held", "")
@@ -261,7 +257,7 @@ class TestXanModProviderExtra:
         assert rc == 0
 
     def test_unhold_delegates(self):
-        from ukm.core.kernel import KernelEntry, KernelVersion, KernelFamily
+        from ukm.core.kernel import KernelEntry, KernelFamily, KernelVersion
 
         b = mock.MagicMock()
         b.unhold.return_value = (0, "unheld", "")

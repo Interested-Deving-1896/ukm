@@ -8,8 +8,6 @@ the CI containers defined in .github/workflows/integration.yml.
 
 from __future__ import annotations
 
-import shutil
-
 import pytest
 
 

@@ -421,7 +421,7 @@ class TestCmdNotifyEnable:
             ),
         ):
             # Just ensure it doesn't crash when systemctl is absent
-            rc = main(["notify-enable"])
+            main(["notify-enable"])
         # May return 0 or 1 depending on whether unit files exist; just no exception
 
     def test_notify_disable_no_systemctl(self, capsys):
@@ -677,7 +677,6 @@ class TestCmdNotifyShellInstall:
         assert str(result[0]) == str(explicit)
 
     def test_shell_rc_files_bash_hint(self, tmp_path):
-        from ukm.cli.main import _shell_rc_files
 
         bashrc = tmp_path / ".bashrc"
         bashrc.write_text("")

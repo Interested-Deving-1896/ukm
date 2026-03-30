@@ -587,7 +587,7 @@ def _shell_rc_files(shell_hint: str | None) -> list:
         return [Path(shell_hint)]
 
     # Auto: return all rc files that exist
-    result = []
+    result: list[Path] = []
     for files in candidates.values():
         result.extend(f for f in files if f.exists())
     return result
