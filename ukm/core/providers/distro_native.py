@@ -69,7 +69,7 @@ class DistroNativeProvider(KernelProvider):
 
     # ------------------------------------------------------------------
 
-    def list(self, arch: str, refresh: bool = False) -> list[KernelEntry]:
+    def fetch(self, arch: str, refresh: bool = False) -> list[KernelEntry]:
         if refresh:
             self._backend.refresh_cache()
 

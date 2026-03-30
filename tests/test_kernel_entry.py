@@ -1,17 +1,16 @@
 """Tests for KernelEntry model."""
 
-import pytest
 from ukm.core.kernel import KernelEntry, KernelFamily, KernelStatus, KernelVersion
 
 
 def make_entry(**kwargs) -> KernelEntry:
-    defaults = dict(
-        version=KernelVersion("6.9.0"),
-        family=KernelFamily.MAINLINE,
-        provider_id="mainline_ppa",
-        arch="amd64",
-        flavor="generic",
-    )
+    defaults = {
+        "version": KernelVersion("6.9.0"),
+        "family": KernelFamily.MAINLINE,
+        "provider_id": "mainline_ppa",
+        "arch": "amd64",
+        "flavor": "generic",
+    }
     defaults.update(kwargs)
     return KernelEntry(**defaults)
 

@@ -1,0 +1,41 @@
+# Maintainer: ukm contributors <https://github.com/ukm-project/ukm>
+pkgname=ukm
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="Universal Kernel Manager — install, remove, and manage Linux kernels across all major distros"
+arch=("any")
+url="https://github.com/ukm-project/ukm"
+license=("GPL-3.0-or-later")
+depends=("python>=3.11" "python-docopt")
+optdepends=(
+    "python-pyside6: GUI support (PySide6 binding)"
+    "python-pyqt6: GUI support (PyQt6 binding)"
+    "dkms: automatic DKMS module rebuild after kernel install/remove"
+    "libnotify: desktop notifications (notify-send)"
+)
+makedepends=("python-build" "python-installer" "python-hatchling")
+source=("$pkgname-$pkgver.tar.gz::https://github.com/ukm-project/ukm/archive/refs/tags/v$pkgver.tar.gz")
+b2sums=("SKIP")
+
+build() {
+    cd "$pkgname-$pkgver"
+    python -m build --wheel --no-isolation
+}
+
+package() {
+    cd "$pkgname-$pkgver"
+    python -m installer --destdir="$pkgdir" dist/*.whl
+
+    # systemd user units for background notifications
+    install -Dm644 share/systemd/ukm-notify.service \
+        "$pkgdir/usr/lib/systemd/user/ukm-notify.service"
+    install -Dm644 share/systemd/ukm-notify.timer \
+        "$pkgdir/usr/lib/systemd/user/ukm-notify.timer"
+
+    # Desktop entry
+    install -Dm644 share/applications/ukm.desktop \
+        "$pkgdir/usr/share/applications/ukm.desktop" 2>/dev/null || true
+
+    # License
+    install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

@@ -47,7 +47,7 @@ class KernelManager:
         entries: list[KernelEntry] = []
         for provider in self._providers:
             with contextlib.suppress(Exception):
-                entries.extend(provider.list(self._arch, refresh=refresh))
+                entries.extend(provider.fetch(self._arch, refresh=refresh))
         # Apply persisted notes and locks
         for entry in entries:
             key = self._state_key(entry)

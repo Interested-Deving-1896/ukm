@@ -72,7 +72,7 @@ class KernelProvider(ABC):
     # ------------------------------------------------------------------
 
     @abstractmethod
-    def list(self, arch: str, refresh: bool = False) -> list[KernelEntry]:
+    def fetch(self, arch: str, refresh: bool = False) -> list[KernelEntry]:
         """
         Return all known kernels for the given arch.
         refresh=True forces a cache/index refresh before listing.

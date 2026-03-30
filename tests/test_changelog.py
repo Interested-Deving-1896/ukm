@@ -6,7 +6,7 @@ import tempfile
 import unittest.mock as mock
 from pathlib import Path
 
-from ukm.core.changelog import fetch, clear_cache, _fetch_mainline, _fetch_liquorix
+from ukm.core.changelog import _fetch_liquorix, _fetch_mainline, clear_cache, fetch
 
 
 class TestChangelogCache:
@@ -105,13 +105,13 @@ class TestMainlineFetcher:
 class TestLiquorixFetcher:
     def test_extracts_version_section(self):
         fake_changelog = (
-            "--- 6.9.0-1 ---\n"
-            "- Improved scheduler\n"
-            "- Updated MuQSS\n"
-            "---\n"
-            "--- 6.8.0-1 ---\n"
-            "- Previous release\n"
-        ).encode()
+            b"--- 6.9.0-1 ---\n"
+            b"- Improved scheduler\n"
+            b"- Updated MuQSS\n"
+            b"---\n"
+            b"--- 6.8.0-1 ---\n"
+            b"- Previous release\n"
+        )
 
         with mock.patch("urllib.request.urlopen") as mock_open:
             mock_resp = mock.MagicMock()
@@ -134,7 +134,9 @@ class TestLiquorixFetcher:
 
 class TestUnknownProvider:
     def test_unknown_provider_returns_empty(self):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            with mock.patch("ukm.core.changelog._CACHE_DIR", Path(tmpdir)):
-                result = fetch("unknown_provider", "6.9.0")
+        with (
+            tempfile.TemporaryDirectory() as tmpdir,
+            mock.patch("ukm.core.changelog._CACHE_DIR", Path(tmpdir)),
+        ):
+            result = fetch("unknown_provider", "6.9.0")
         assert result == ""

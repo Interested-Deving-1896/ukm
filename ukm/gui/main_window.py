@@ -371,6 +371,10 @@ class MainWindow(QMainWindow):
                 self, "Already Installed", f"Kernel {entry.display_name} is already installed."
             )
             return
+
+        # For XanMod on amd64, offer to switch to the CPU-optimal ISA flavor
+        entry = self._maybe_suggest_xanmod_flavor(entry)
+
         reply = QMessageBox.question(
             self,
             "Install Kernel",
@@ -381,6 +385,46 @@ class MainWindow(QMainWindow):
             self._run_operation(
                 lambda: self._manager.install(entry), f"Installing {entry.display_name}…"
             )
+
+    def _maybe_suggest_xanmod_flavor(self, entry: KernelEntry) -> KernelEntry:
+        """If entry is XanMod and a better ISA-level flavor exists, offer to switch."""
+        if entry.family != KernelFamily.XANMOD:
+            return entry
+        if system_info().arch != "amd64":
+            return entry
+
+        from ukm.core.cpu import recommended_xanmod_level, xanmod_level_description
+
+        recommended = recommended_xanmod_level()
+        if recommended == "v1":
+            return entry  # baseline — no ISA-specific build to suggest
+
+        # Find a matching ISA-level variant in the same version
+        candidates = [
+            e
+            for e in self._manager.list_all()
+            if e.family == KernelFamily.XANMOD
+            and str(e.version) == str(entry.version)
+            and recommended in e.flavor
+            and not e.is_installed
+        ]
+        if not candidates:
+            return entry
+
+        best = candidates[0]
+        if best.flavor == entry.flavor:
+            return entry  # already the recommended flavor
+
+        desc = xanmod_level_description(recommended)
+        reply = QMessageBox.question(
+            self,
+            "Recommended XanMod Flavor",
+            f"Your CPU supports <b>{recommended}</b> ({desc}).<br><br>"
+            f"Switch from <i>{entry.flavor}</i> to the optimised "
+            f"<b>{best.flavor}</b> build?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        )
+        return best if reply == QMessageBox.StandardButton.Yes else entry
 
     def _do_remove(self, entry: KernelEntry) -> None:
         if entry.is_running:

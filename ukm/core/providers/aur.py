@@ -107,7 +107,7 @@ class AURProvider(KernelProvider):
     # list()
     # ------------------------------------------------------------------
 
-    def list(self, arch: str, refresh: bool = False) -> list[KernelEntry]:
+    def fetch(self, arch: str, refresh: bool = False) -> list[KernelEntry]:
         if arch not in self.supported_arches:
             return []
 

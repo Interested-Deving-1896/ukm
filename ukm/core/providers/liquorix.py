@@ -79,7 +79,7 @@ class LiquorixProvider(KernelProvider):
 
     # ------------------------------------------------------------------
 
-    def list(self, arch: str, refresh: bool = False) -> list[KernelEntry]:
+    def fetch(self, arch: str, refresh: bool = False) -> list[KernelEntry]:
         if arch not in _SUPPORTED_ARCHES:
             return []
 

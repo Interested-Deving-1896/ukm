@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import unittest.mock as mock
+
 from ukm.core.kernel import KernelFamily, KernelStatus
 from ukm.core.providers.mainline_ppa import MainlinePPAProvider
 
@@ -74,7 +75,8 @@ class TestMainlinePPAProvider:
         assert "6.9.0-rc3" in versions
 
     def test_list_marks_running_kernel(self):
-        import tempfile, json
+        import json
+        import tempfile
         from pathlib import Path
 
         p = MainlinePPAProvider(make_backend())
@@ -94,14 +96,15 @@ class TestMainlinePPAProvider:
             ):
                 mock_si.return_value.running_kernel = "6.9.0-061900-generic"
                 mock_si.return_value.arch = "amd64"
-                entries = p.list("amd64", refresh=False)
+                entries = p.fetch("amd64", refresh=False)
 
         running = [e for e in entries if e.status == KernelStatus.RUNNING]
         assert len(running) == 1
         assert str(running[0].version) == "6.9.0"
 
     def test_list_sorted_newest_first(self):
-        import tempfile, json
+        import json
+        import tempfile
         from pathlib import Path
 
         p = MainlinePPAProvider(make_backend())
@@ -121,7 +124,7 @@ class TestMainlinePPAProvider:
             ):
                 mock_si.return_value.running_kernel = ""
                 mock_si.return_value.arch = "amd64"
-                entries = p.list("amd64", refresh=False)
+                entries = p.fetch("amd64", refresh=False)
 
         versions = [str(e.version) for e in entries]
         assert versions == ["6.9.0", "6.8.0", "6.7.0"]

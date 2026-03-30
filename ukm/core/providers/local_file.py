@@ -42,7 +42,7 @@ class LocalFileProvider(KernelProvider):
 
     # ------------------------------------------------------------------
 
-    def list(self, arch: str, refresh: bool = False) -> list[KernelEntry]:
+    def fetch(self, arch: str, refresh: bool = False) -> list[KernelEntry]:
         # Local file provider has no persistent list; entries are created
         # on demand when the user selects a file via the GUI or CLI.
         return []
@@ -98,7 +98,9 @@ class LocalFileProvider(KernelProvider):
 
     @staticmethod
     def _version_from_filename(name: str) -> str:
-        m = re.search(r"(\d+\.\d+[\d.]*[^\s_]*)", name)
+        # Match X.Y or X.Y.Z optionally followed by -rcN or -preN, stop before
+        # anything else (package suffixes, arch strings, etc.)
+        m = re.search(r"(\d+\.\d+(?:\.\d+)?(?:-(?:rc|pre)\d+)?)", name)
         return m.group(1) if m else ""
 
     @staticmethod
