@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import unittest.mock as mock
+
 from ukm.core.kernel import KernelFamily, KernelStatus
 from ukm.core.providers.distro_native import DistroNativeProvider
 from ukm.core.system import PackageManagerKind
@@ -87,3 +88,101 @@ class TestDistroNativeProvider:
         flavors = [e.flavor for e in entries]
         assert "linux" in flavors
         assert "linux-zen" in flavors
+
+
+class TestDistroNativeFetch:
+    """Integration-style tests for the fetch() dispatch."""
+
+    @mock.patch("ukm.core.providers.distro_native.system_info")
+    def test_fetch_apt_dispatches(self, mock_si):
+        mock_si.return_value.package_manager = PackageManagerKind.APT
+        mock_si.return_value.running_kernel = "6.8.0-45-generic"
+        b = make_backend()
+        b._run.return_value = (0, "linux-image-6.8.0-45-generic - kernel\n", "")
+        p = DistroNativeProvider(b)
+        entries = p.fetch("amd64")
+        assert all(e.family == KernelFamily.DISTRO for e in entries)
+
+    @mock.patch("ukm.core.providers.distro_native.system_info")
+    def test_fetch_unknown_pm_returns_empty(self, mock_si):
+        from ukm.core.system import PackageManagerKind
+
+        mock_si.return_value.package_manager = PackageManagerKind.UNKNOWN
+        mock_si.return_value.running_kernel = ""
+        p = DistroNativeProvider(make_backend())
+        assert p.fetch("amd64") == []
+
+    @mock.patch("ukm.core.providers.distro_native.system_info")
+    def test_fetch_refresh_calls_backend(self, mock_si):
+        mock_si.return_value.package_manager = PackageManagerKind.APT
+        mock_si.return_value.running_kernel = ""
+        b = make_backend()
+        DistroNativeProvider(b).fetch("amd64", refresh=True)
+        b.refresh_cache.assert_called_once()
+
+
+class TestDistroNativeInstallRemove:
+    @mock.patch("ukm.core.providers.distro_native.system_info")
+    def test_install_success(self, mock_si):
+
+        from ukm.core.kernel import KernelEntry, KernelVersion
+
+        mock_si.return_value.package_manager = PackageManagerKind.APT
+        mock_si.return_value.running_kernel = ""
+        b = make_backend()
+        b.install.return_value = (0, "ok\n", "")
+        p = DistroNativeProvider(b)
+        entry = KernelEntry(
+            version=KernelVersion("6.9.0"),
+            family=KernelFamily.DISTRO,
+            provider_id="distro_native",
+            arch="amd64",
+            flavor="generic",
+            description="linux-image-6.9.0-generic",
+        )
+        lines = list(p.install(entry))
+        b.install.assert_called_once_with(["linux-image-6.9.0-generic"])
+        assert any("installed" in line.lower() for line in lines)
+
+    @mock.patch("ukm.core.providers.distro_native.system_info")
+    def test_install_failure_raises(self, mock_si):
+        import pytest
+
+        from ukm.core.kernel import KernelEntry, KernelVersion
+
+        mock_si.return_value.package_manager = PackageManagerKind.APT
+        mock_si.return_value.running_kernel = ""
+        b = make_backend()
+        b.install.return_value = (1, "", "error\n")
+        p = DistroNativeProvider(b)
+        entry = KernelEntry(
+            version=KernelVersion("6.9.0"),
+            family=KernelFamily.DISTRO,
+            provider_id="distro_native",
+            arch="amd64",
+            flavor="generic",
+            description="linux-image-6.9.0-generic",
+        )
+        with pytest.raises(RuntimeError, match="failed"):
+            list(p.install(entry))
+
+    @mock.patch("ukm.core.providers.distro_native.system_info")
+    def test_remove_success(self, mock_si):
+        from ukm.core.kernel import KernelEntry, KernelVersion
+
+        mock_si.return_value.package_manager = PackageManagerKind.APT
+        mock_si.return_value.running_kernel = ""
+        b = make_backend()
+        b.remove.return_value = (0, "removed\n", "")
+        p = DistroNativeProvider(b)
+        entry = KernelEntry(
+            version=KernelVersion("6.8.0"),
+            family=KernelFamily.DISTRO,
+            provider_id="distro_native",
+            arch="amd64",
+            flavor="generic",
+            description="linux-image-6.8.0-generic",
+        )
+        lines = list(p.remove(entry))
+        b.remove.assert_called_once_with(["linux-image-6.8.0-generic"], purge=False)
+        assert any("removed" in line.lower() for line in lines)

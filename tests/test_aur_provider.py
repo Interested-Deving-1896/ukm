@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import unittest.mock as mock
+
 from ukm.core.kernel import KernelFamily, KernelStatus
 from ukm.core.providers.aur import AURProvider, _aur_helper
 
@@ -67,7 +68,7 @@ class TestAURProvider:
         backend._run.side_effect = run_side
 
         p = AURProvider(backend)
-        entries = p.list("amd64")
+        entries = p.fetch("amd64")
 
         installed = [e for e in entries if e.status == KernelStatus.INSTALLED]
         assert any(e.flavor == "linux-cachyos" for e in installed)

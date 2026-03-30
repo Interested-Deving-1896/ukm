@@ -97,7 +97,7 @@ class GentooProvider(KernelProvider):
     # list()
     # ------------------------------------------------------------------
 
-    def list(self, arch: str, refresh: bool = False) -> list[KernelEntry]:
+    def fetch(self, arch: str, refresh: bool = False) -> list[KernelEntry]:
         if refresh:
             self._portage.refresh_cache()
 

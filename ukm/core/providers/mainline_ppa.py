@@ -65,7 +65,7 @@ class MainlinePPAProvider(KernelProvider):
     # list()
     # ------------------------------------------------------------------
 
-    def list(self, arch: str, refresh: bool = False) -> list[KernelEntry]:
+    def fetch(self, arch: str, refresh: bool = False) -> list[KernelEntry]:
         _CACHE_DIR.mkdir(parents=True, exist_ok=True)
         index_cache = _CACHE_DIR / "index.json"
 

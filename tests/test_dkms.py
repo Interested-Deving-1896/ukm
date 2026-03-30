@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import unittest.mock as mock
+
 from ukm.core.dkms import (
     is_available,
-    status,
     modules_for_kernel,
+    status,
     status_summary,
 )
 
@@ -92,7 +93,7 @@ class TestDkmsAutoinstall:
         from ukm.core.dkms import autoinstall
 
         lines = list(autoinstall("6.9.0-50-generic"))
-        assert any("not found" in l for l in lines)
+        assert any("not found" in line for line in lines)
 
     @mock.patch("shutil.which", return_value="/usr/sbin/dkms")
     @mock.patch("subprocess.run")
@@ -101,4 +102,4 @@ class TestDkmsAutoinstall:
 
         mock_run.return_value = mock.MagicMock(returncode=0, stdout="")
         lines = list(autoinstall("6.9.0-50-generic"))
-        assert any("nothing to rebuild" in l.lower() for l in lines)
+        assert any("nothing to rebuild" in line.lower() for line in lines)

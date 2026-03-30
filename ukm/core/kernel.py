@@ -106,7 +106,7 @@ class KernelEntry:
     """
     Represents a single installable/installed kernel.
 
-    Produced by KernelProvider.list() and consumed everywhere else.
+    Produced by KernelProvider.fetch() and consumed everywhere else.
     """
 
     # Identity

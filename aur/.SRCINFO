@@ -1,0 +1,20 @@
+pkgbase = ukm
+	pkgdesc = Universal Kernel Manager — install, remove, and manage Linux kernels across all major distros
+	pkgver = 0.1.0
+	pkgrel = 1
+	url = https://github.com/ukm-project/ukm
+	arch = any
+	license = GPL-3.0-or-later
+	makedepends = python-build
+	makedepends = python-installer
+	makedepends = python-hatchling
+	depends = python>=3.11
+	depends = python-docopt
+	optdepends = python-pyside6: GUI support (PySide6 binding)
+	optdepends = python-pyqt6: GUI support (PyQt6 binding)
+	optdepends = dkms: automatic DKMS module rebuild after kernel install/remove
+	optdepends = libnotify: desktop notifications (notify-send)
+	source = ukm-0.1.0.tar.gz::https://github.com/ukm-project/ukm/archive/refs/tags/v0.1.0.tar.gz
+	b2sums = SKIP
+
+pkgname = ukm

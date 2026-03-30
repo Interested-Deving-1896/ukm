@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import unittest.mock as mock
+
 from ukm.core.cpu import (
-    recommended_xanmod_level,
-    xanmod_level_description,
-    cpu_summary,
     _V2_FLAGS,
     _V3_FLAGS,
     _V4_FLAGS,
+    cpu_summary,
+    recommended_xanmod_level,
+    xanmod_level_description,
 )
 
 

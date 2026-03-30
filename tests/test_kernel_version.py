@@ -1,6 +1,5 @@
 """Tests for KernelVersion parsing and ordering."""
 
-import pytest
 from ukm.core.kernel import KernelVersion
 
 

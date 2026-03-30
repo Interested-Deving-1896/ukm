@@ -19,6 +19,8 @@ import subprocess
 from datetime import datetime, timedelta
 from pathlib import Path
 
+from ukm.core.kernel import KernelVersion
+from ukm.core.manager import KernelManager
 from ukm.core.system import system_info
 
 _STATE_FILE = Path.home() / ".config" / "ukm" / "notify_state.json"
@@ -39,9 +41,6 @@ def check_and_notify(provider_id: str = "mainline_ppa") -> bool:
 
     Returns True if a notification was sent.
     """
-    from ukm.core.kernel import KernelVersion
-    from ukm.core.manager import KernelManager
-
     mgr = KernelManager()
     running_str = system_info().running_kernel
     running_ver = KernelVersion(running_str.split("-")[0])
