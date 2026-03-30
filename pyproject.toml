@@ -1,0 +1,87 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ukm"
+version = "0.1.0"
+description = "Universal Kernel Manager — install, remove, and manage Linux kernels across all major distros and architectures"
+readme = "README.md"
+license = { spdx = "GPL-3.0-or-later" }
+requires-python = ">=3.11"
+authors = [
+    { name = "ukm contributors" },
+]
+keywords = ["linux", "kernel", "manager", "xanmod", "liquorix", "mainline", "gentoo"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: X11 Applications :: Qt",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: System :: Systems Administration",
+]
+
+# Core runtime — no Qt binding listed here because the user chooses PySide6 or PyQt6
+dependencies = [
+    "docopt>=0.6.2",
+]
+
+[project.optional-dependencies]
+# GUI — install one of these
+pyside6 = ["PySide6>=6.5"]
+pyqt6   = ["PyQt6>=6.5"]
+# Both (for development / testing the shim)
+qt-both = ["PySide6>=6.5", "PyQt6>=6.5"]
+# Development
+dev = [
+    "pytest>=7",
+    "pytest-cov",
+    "ruff",
+    "mypy",
+    "PySide6>=6.5",
+]
+
+[project.scripts]
+ukm     = "ukm.cli.main:main"
+ukm-gui = "ukm.gui.app:main"
+
+[project.urls]
+Repository = "https://github.com/ukm-project/ukm"
+Issues     = "https://github.com/ukm-project/ukm/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["ukm"]
+
+# ---------------------------------------------------------------------------
+# Ruff (linter + formatter)
+# ---------------------------------------------------------------------------
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM"]
+ignore = ["E501"]  # line length handled by formatter
+
+[tool.ruff.lint.isort]
+known-first-party = ["ukm"]
+
+# ---------------------------------------------------------------------------
+# Mypy
+# ---------------------------------------------------------------------------
+[tool.mypy]
+python_version = "3.11"
+strict = false
+ignore_missing_imports = true
+warn_unused_ignores = true
+
+# ---------------------------------------------------------------------------
+# Pytest
+# ---------------------------------------------------------------------------
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts   = "-v --tb=short"
