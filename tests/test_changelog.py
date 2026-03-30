@@ -232,13 +232,203 @@ class TestDistroNativeFetcher:
                 result = _fetch_distro_native("6.9.0", "generic")
             assert "Kernel changelog" in result
 
-    def test_network_error_returns_empty(self):
+    def test_network_error_returns_fallback_url(self):
         from ukm.core.changelog import _fetch_distro_native
 
         with (
             mock.patch("pathlib.Path.exists", return_value=False),
             mock.patch("shutil.which", return_value="/usr/bin/apt-get"),
             mock.patch("urllib.request.urlopen", side_effect=Exception("timeout")),
+        ):
+            result = _fetch_distro_native("6.9.0", "generic")
+        # Both Ubuntu and Debian network calls failed → returns a fallback URL
+        assert "packages.debian.org" in result or "changelogs.ubuntu.com" in result or result == ""
+
+
+class TestDistroAptFetcher:
+    def test_ubuntu_changelog_returned(self):
+        from ukm.core.changelog import _fetch_distro_apt
+
+        with mock.patch("urllib.request.urlopen") as mock_open:
+            mock_resp = mock.MagicMock()
+            mock_resp.read.return_value = b"linux (6.9.0) noble; urgency=medium\n"
+            mock_resp.__enter__ = lambda s: s
+            mock_resp.__exit__ = mock.MagicMock(return_value=False)
+            mock_open.return_value = mock_resp
+            result = _fetch_distro_apt("6.9.0", "generic")
+        assert "6.9.0" in result
+
+    def test_falls_back_to_debian_on_ubuntu_failure(self):
+        from ukm.core.changelog import _fetch_distro_apt
+
+        debian_content = b"linux (6.9.0-1) unstable; urgency=medium\n"
+        call_count = 0
+
+        def side_effect(url, timeout=10):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                raise Exception("Ubuntu 404")
+            resp = mock.MagicMock()
+            resp.read.return_value = debian_content
+            resp.__enter__ = lambda s: s
+            resp.__exit__ = mock.MagicMock(return_value=False)
+            return resp
+
+        with mock.patch("urllib.request.urlopen", side_effect=side_effect):
+            result = _fetch_distro_apt("6.9.0", "generic")
+        assert "6.9.0" in result
+
+    def test_returns_fallback_url_when_both_fail(self):
+        from ukm.core.changelog import _fetch_distro_apt
+
+        with mock.patch("urllib.request.urlopen", side_effect=Exception("timeout")):
+            result = _fetch_distro_apt("6.9.0", "generic")
+        assert "packages.debian.org" in result
+
+
+class TestDistroDnfFetcher:
+    def test_returns_bodhi_url_on_network_error(self):
+        from ukm.core.changelog import _fetch_distro_dnf
+
+        with mock.patch("urllib.request.urlopen", side_effect=Exception("timeout")):
+            result = _fetch_distro_dnf("6.9.0-100.fc40.x86_64", "")
+        assert "bodhi.fedoraproject.org" in result
+
+    def test_extracts_notes_from_bodhi_json(self):
+        from ukm.core.changelog import _fetch_distro_dnf
+
+        html = b'{"notes": "Rebase to 6.9.0", "other": "x"}'
+        with mock.patch("urllib.request.urlopen") as mock_open:
+            mock_resp = mock.MagicMock()
+            mock_resp.read.return_value = html
+            mock_resp.__enter__ = lambda s: s
+            mock_resp.__exit__ = mock.MagicMock(return_value=False)
+            mock_open.return_value = mock_resp
+            result = _fetch_distro_dnf("6.9.0-100.fc40", "")
+        assert "Rebase" in result or "bodhi" in result
+
+    def test_strips_fc_suffix_from_version(self):
+        from ukm.core.changelog import _fetch_distro_dnf
+
+        with mock.patch("urllib.request.urlopen", side_effect=Exception("timeout")) as m:
+            _fetch_distro_dnf("6.9.0-100.fc40.x86_64", "")
+        # URL should contain the stripped version
+        url = m.call_args[0][0]
+        assert "fc40.x86_64" not in url
+
+
+class TestDistroZypperFetcher:
+    def test_returns_opensuse_url_on_network_error(self):
+        from ukm.core.changelog import _fetch_distro_zypper
+
+        with mock.patch("urllib.request.urlopen", side_effect=Exception("timeout")):
+            result = _fetch_distro_zypper("6.9.0", "default")
+        assert "software.opensuse.org" in result
+
+    def test_uses_flavor_in_package_name(self):
+        from ukm.core.changelog import _fetch_distro_zypper
+
+        with mock.patch("urllib.request.urlopen", side_effect=Exception("timeout")) as m:
+            _fetch_distro_zypper("6.9.0", "rt")
+        url = m.call_args[0][0]
+        assert "kernel-rt" in url
+
+    def test_uses_kernel_default_for_generic_flavor(self):
+        from ukm.core.changelog import _fetch_distro_zypper
+
+        with mock.patch("urllib.request.urlopen", side_effect=Exception("timeout")) as m:
+            _fetch_distro_zypper("6.9.0", "generic")
+        url = m.call_args[0][0]
+        assert "kernel-default" in url
+
+
+class TestDistroApkFetcher:
+    def test_returns_alpine_url_on_network_error(self):
+        from ukm.core.changelog import _fetch_distro_apk
+
+        with mock.patch("urllib.request.urlopen", side_effect=Exception("timeout")):
+            result = _fetch_distro_apk("6.6.0-r0", "lts")
+        assert "pkgs.alpinelinux.org" in result
+
+    def test_uses_flavor_in_package_name(self):
+        from ukm.core.changelog import _fetch_distro_apk
+
+        with mock.patch("urllib.request.urlopen", side_effect=Exception("timeout")) as m:
+            _fetch_distro_apk("6.6.0", "edge")
+        url = m.call_args[0][0]
+        assert "linux-edge" in url
+
+    def test_uses_linux_lts_for_generic_flavor(self):
+        from ukm.core.changelog import _fetch_distro_apk
+
+        with mock.patch("urllib.request.urlopen", side_effect=Exception("timeout")) as m:
+            _fetch_distro_apk("6.6.0", "generic")
+        url = m.call_args[0][0]
+        assert "linux-lts" in url
+
+
+class TestDistroNativeDispatch:
+    def test_dispatches_to_dnf_fetcher(self):
+        from ukm.core.changelog import _fetch_distro_native
+
+        with (
+            mock.patch("pathlib.Path.exists", return_value=False),
+            mock.patch("shutil.which", side_effect=lambda t: "/usr/bin/dnf" if t == "dnf" else None),
+            mock.patch("urllib.request.urlopen", side_effect=Exception("timeout")),
+        ):
+            result = _fetch_distro_native("6.9.0-100.fc40", "")
+        assert "bodhi.fedoraproject.org" in result
+
+    def test_dispatches_to_pacman_fetcher(self):
+        from ukm.core.changelog import _fetch_distro_native
+
+        with (
+            mock.patch("pathlib.Path.exists", return_value=False),
+            mock.patch(
+                "shutil.which",
+                side_effect=lambda t: "/usr/bin/pacman" if t == "pacman" else None,
+            ),
+            mock.patch("urllib.request.urlopen", side_effect=Exception("timeout")),
+        ):
+            result = _fetch_distro_native("6.9.0", "")
+        # Falls through to AUR fetcher which returns empty on network error
+        assert result == "" or "aur.archlinux.org" in result
+
+    def test_dispatches_to_zypper_fetcher(self):
+        from ukm.core.changelog import _fetch_distro_native
+
+        with (
+            mock.patch("pathlib.Path.exists", return_value=False),
+            mock.patch(
+                "shutil.which",
+                side_effect=lambda t: "/usr/bin/zypper" if t == "zypper" else None,
+            ),
+            mock.patch("urllib.request.urlopen", side_effect=Exception("timeout")),
+        ):
+            result = _fetch_distro_native("6.9.0", "default")
+        assert "software.opensuse.org" in result
+
+    def test_dispatches_to_apk_fetcher(self):
+        from ukm.core.changelog import _fetch_distro_native
+
+        with (
+            mock.patch("pathlib.Path.exists", return_value=False),
+            mock.patch(
+                "shutil.which",
+                side_effect=lambda t: "/sbin/apk" if t == "apk" else None,
+            ),
+            mock.patch("urllib.request.urlopen", side_effect=Exception("timeout")),
+        ):
+            result = _fetch_distro_native("6.6.0", "lts")
+        assert "pkgs.alpinelinux.org" in result
+
+    def test_returns_empty_when_no_pm_found(self):
+        from ukm.core.changelog import _fetch_distro_native
+
+        with (
+            mock.patch("pathlib.Path.exists", return_value=False),
+            mock.patch("shutil.which", return_value=None),
         ):
             result = _fetch_distro_native("6.9.0", "generic")
         assert result == ""

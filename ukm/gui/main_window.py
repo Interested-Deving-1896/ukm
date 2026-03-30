@@ -267,6 +267,25 @@ class MainWindow(QMainWindow):
             self._act_compile.triggered.connect(self._on_gentoo_compile)
             tb.addAction(self._act_compile)
 
+        tb.addSeparator()
+        self._act_providers = QAction("⚡  Providers", self)
+        self._act_providers.setToolTip("Show provider status and any errors")
+        self._act_providers.triggered.connect(self._on_show_providers)
+        tb.addAction(self._act_providers)
+
+    def _on_show_providers(self) -> None:
+        """Show a dialog listing all providers and any errors from the last refresh."""
+        errors = self._manager.provider_errors
+        lines: list[str] = []
+        for p in self._manager.providers:
+            status = "✓ available" if p.is_available() else "— unavailable"
+            err = errors.get(p.id)
+            if err:
+                status = f"✗ error: {err}"
+            lines.append(f"<b>{p.id}</b>  ({p.display_name})<br>&nbsp;&nbsp;{status}")
+        body = "<br><br>".join(lines) or "No providers loaded."
+        QMessageBox.information(self, "Provider Status", body)
+
     def _setup_statusbar(self) -> None:
         sb = self.statusBar()
         info = system_info()
@@ -558,7 +577,19 @@ class MainWindow(QMainWindow):
             view.set_entries([e for e in entries if e.family.value == family_val])
         count = len(entries)
         installed = sum(1 for e in entries if e.is_installed)
-        self.statusBar().showMessage(f"Ready — {count} kernels ({installed} installed)", 5000)
+
+        errors = self._manager.provider_errors
+        if errors:
+            n = len(errors)
+            names = ", ".join(errors.keys())
+            self.statusBar().showMessage(
+                f"Ready — {count} kernels ({installed} installed)"
+                f"  ⚠ {n} provider(s) failed: {names}",
+                10000,
+            )
+        else:
+            self.statusBar().showMessage(f"Ready — {count} kernels ({installed} installed)", 5000)
+
         if self._progress is not None:
             self._progress.stop(success=True)
         self._set_busy(False)

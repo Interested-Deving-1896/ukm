@@ -4,12 +4,13 @@ ukm — Universal Kernel Manager CLI
 Usage:
   ukm list [--family=<family>] [--installed] [--json] [--refresh]
   ukm search <pattern> [--json] [--refresh]
+  ukm update [--provider=<id>] [--flavor=<flavor>] [--yes] [--dry-run]
   ukm install <version> [--provider=<id>] [--flavor=<flavor>] [--yes]
   ukm remove  <version> [--provider=<id>] [--purge] [--yes]
   ukm hold    <version> [--provider=<id>]
   ukm unhold  <version> [--provider=<id>]
   ukm note    <version> <text> [--provider=<id>]
-  ukm remove-old [--keep=<n>] [--purge] [--yes]
+  ukm remove-old [--keep=<n>] [--purge] [--dry-run] [--yes]
   ukm providers
   ukm info
   ukm notify [--provider=<id>]
@@ -39,6 +40,7 @@ Options:
   --yes                Skip confirmation prompts.
   --purge              Also remove config files on removal.
   --keep=<n>           Number of recent kernels to keep with remove-old [default: 1].
+  --dry-run            Print what would be removed without making any changes.
   --genkernel          Use genkernel for compilation (default if available).
   --make               Use raw make for compilation.
   --jobs=<n>           Parallel make jobs [default: auto].
@@ -91,6 +93,10 @@ def main(argv: list[str] | None = None) -> int:
     # ------------------------------------------------------------- search
     if args["search"]:
         return cmd_search(mgr, args)
+
+    # ------------------------------------------------------------- update
+    if args["update"]:
+        return cmd_update(mgr, args)
 
     # ------------------------------------------------------------ install
     if args["install"]:
@@ -291,6 +297,56 @@ def cmd_search(mgr: KernelManager, args: dict) -> int:
     return 0
 
 
+def cmd_update(mgr: KernelManager, args: dict) -> int:
+    """
+    Install the newest available kernel from the preferred provider.
+
+    Compares the latest available version against all installed kernels.
+    If a newer version exists and is not already installed, installs it.
+    """
+    provider_id: str | None = args.get("--provider") or None
+    flavor: str = args.get("--flavor") or ""
+    yes = bool(args.get("--yes"))
+    dry_run = bool(args.get("--dry-run"))
+
+    out.info("Checking for newer kernels…")
+    latest = mgr.latest(provider_id=provider_id, flavor=flavor, refresh=True)
+
+    if latest is None:
+        out.warn("No kernels found from the selected provider.")
+        return 1
+
+    installed = mgr.list_installed()
+    if installed:
+        newest_installed = max(installed, key=lambda e: e.version)
+        if latest.version <= newest_installed.version:
+            out.success(f"Already up to date — {newest_installed.version} is the newest available.")
+            return 0
+
+    out.info(f"  Latest available : {latest.version}  [{latest.provider_id}]")
+    if installed:
+        out.info(f"  Currently running: {max(installed, key=lambda e: e.version).version}")
+
+    if dry_run:
+        out.info(f"Would install {latest.version} (--dry-run, no changes made).")
+        return 0
+
+    if not yes:
+        answer = input(f"Install {latest.version}? [y/N] ")
+        if answer.lower() not in ("y", "yes"):
+            out.info("Aborted.")
+            return 0
+
+    try:
+        for line in mgr.install(latest):
+            out.log(line)
+        out.success(f"Kernel {latest.version} installed.")
+    except RuntimeError as e:
+        out.error(str(e))
+        return 1
+    return 0
+
+
 def cmd_install(mgr: KernelManager, args: dict) -> int:
     version = args["<version>"]
     provider_id = args.get("--provider")
@@ -360,7 +416,19 @@ def cmd_remove(mgr: KernelManager, args: dict) -> int:
 def cmd_remove_old(mgr: KernelManager, args: dict) -> int:
     keep = int(args.get("--keep") or 1)
     purge = bool(args.get("--purge"))
+    dry_run = bool(args.get("--dry-run"))
     yes = bool(args.get("--yes"))
+
+    if dry_run:
+        candidates = mgr.remove_old_candidates(keep=keep)
+        if not candidates:
+            out.info("Nothing to remove.")
+            return 0
+        out.info(f"Would remove {len(candidates)} kernel(s):")
+        for e in candidates:
+            suffix = " (purge)" if purge else ""
+            out.info(f"  {e.version}  [{e.provider_id}]{suffix}")
+        return 0
 
     if not yes:
         answer = input(f"Remove all old kernels (keeping {keep} most recent + running)? [y/N] ")

@@ -307,6 +307,94 @@ class TestHoldUnhold:
         assert "not found" in err
 
 
+class TestProviderErrors:
+    def test_errors_empty_when_all_succeed(self, tmp_path):
+        provider = _mock_provider([make_entry("6.9.0")])
+        with _mgr_ctx(tmp_path, [provider]):
+            mgr = KernelManager(arch="amd64")
+        mgr.list_all()
+        assert mgr.provider_errors == {}
+
+    def test_errors_populated_when_provider_raises(self, tmp_path):
+        provider = _mock_provider([], provider_id="test_provider")
+        provider.fetch.side_effect = RuntimeError("network timeout")
+        with _mgr_ctx(tmp_path, [provider]):
+            mgr = KernelManager(arch="amd64")
+        mgr.list_all()
+        assert "test_provider" in mgr.provider_errors
+        assert "network timeout" in mgr.provider_errors["test_provider"]
+
+    def test_errors_cleared_on_next_successful_call(self, tmp_path):
+        provider = _mock_provider([], provider_id="test_provider")
+        provider.fetch.side_effect = [RuntimeError("fail"), [make_entry("6.9.0")]]
+        with _mgr_ctx(tmp_path, [provider]):
+            mgr = KernelManager(arch="amd64")
+        mgr.list_all()
+        assert mgr.provider_errors != {}
+        mgr.list_all()
+        assert mgr.provider_errors == {}
+
+    def test_provider_errors_returns_copy(self, tmp_path):
+        provider = _mock_provider([make_entry("6.9.0")])
+        with _mgr_ctx(tmp_path, [provider]):
+            mgr = KernelManager(arch="amd64")
+        errors = mgr.provider_errors
+        errors["injected"] = "should not affect manager"
+        assert "injected" not in mgr.provider_errors
+
+
+class TestLatest:
+    def test_returns_newest_entry(self, tmp_path):
+        entries = [make_entry("6.9.0"), make_entry("6.8.0"), make_entry("6.7.0")]
+        provider = _mock_provider(entries)
+        with _mgr_ctx(tmp_path, [provider]):
+            mgr = KernelManager(arch="amd64")
+        result = mgr.latest()
+        assert str(result.version) == "6.9.0"
+
+    def test_filters_by_provider_id(self, tmp_path):
+        e1 = make_entry("6.9.0")
+        e1.provider_id = "mainline_ppa"
+        e2 = make_entry("6.8.0")
+        e2.provider_id = "xanmod"
+        provider = _mock_provider([e1, e2])
+        with _mgr_ctx(tmp_path, [provider]):
+            mgr = KernelManager(arch="amd64")
+        result = mgr.latest(provider_id="xanmod")
+        assert result is not None
+        assert str(result.version) == "6.8.0"
+
+    def test_filters_by_flavor(self, tmp_path):
+        e1 = make_entry("6.9.0")
+        e1.flavor = "rt"
+        e2 = make_entry("6.8.0")
+        e2.flavor = "generic"
+        provider = _mock_provider([e1, e2])
+        with _mgr_ctx(tmp_path, [provider]):
+            mgr = KernelManager(arch="amd64")
+        result = mgr.latest(flavor="generic")
+        assert str(result.version) == "6.8.0"
+
+    def test_returns_none_when_no_entries(self, tmp_path):
+        provider = _mock_provider([])
+        with _mgr_ctx(tmp_path, [provider]):
+            mgr = KernelManager(arch="amd64")
+        assert mgr.latest() is None
+
+    def test_returns_none_when_provider_filter_matches_nothing(self, tmp_path):
+        provider = _mock_provider([make_entry("6.9.0")], provider_id="mainline_ppa")
+        with _mgr_ctx(tmp_path, [provider]):
+            mgr = KernelManager(arch="amd64")
+        assert mgr.latest(provider_id="xanmod") is None
+
+    def test_passes_refresh_to_list_all(self, tmp_path):
+        provider = _mock_provider([make_entry("6.9.0")])
+        with _mgr_ctx(tmp_path, [provider]):
+            mgr = KernelManager(arch="amd64")
+        mgr.latest(refresh=True)
+        provider.fetch.assert_called_with("amd64", refresh=True)
+
+
 class TestSearch:
     def test_search_by_version(self, tmp_path):
         entries = [make_entry("6.9.0"), make_entry("6.8.0"), make_entry("6.7.0")]
@@ -356,6 +444,51 @@ class TestSearch:
             mgr = KernelManager(arch="amd64")
         mgr.search("6.9", refresh=True)
         provider.fetch.assert_called_with("amd64", refresh=True)
+
+
+class TestRemoveOldCandidates:
+    def test_returns_kernels_beyond_keep(self, tmp_path):
+        entries = [
+            make_entry("6.9.0", status=KernelStatus.INSTALLED),
+            make_entry("6.8.0", status=KernelStatus.INSTALLED),
+            make_entry("6.7.0", status=KernelStatus.INSTALLED),
+        ]
+        provider = _mock_provider(entries)
+        with _mgr_ctx(tmp_path, [provider]):
+            mgr = KernelManager(arch="amd64")
+        candidates = mgr.remove_old_candidates(keep=1)
+        assert len(candidates) == 2
+        assert str(candidates[0].version) == "6.8.0"
+        assert str(candidates[1].version) == "6.7.0"
+
+    def test_excludes_running_kernel(self, tmp_path):
+        entries = [
+            make_entry("6.9.0", status=KernelStatus.RUNNING),
+            make_entry("6.8.0", status=KernelStatus.INSTALLED),
+            make_entry("6.7.0", status=KernelStatus.INSTALLED),
+        ]
+        provider = _mock_provider(entries)
+        with _mgr_ctx(tmp_path, [provider]):
+            mgr = KernelManager(arch="amd64")
+        candidates = mgr.remove_old_candidates(keep=1)
+        assert all(str(e.version) != "6.9.0" for e in candidates)
+
+    def test_excludes_held_kernels(self, tmp_path):
+        e1 = make_entry("6.8.0", status=KernelStatus.INSTALLED)
+        e1.held = True
+        e2 = make_entry("6.7.0", status=KernelStatus.INSTALLED)
+        provider = _mock_provider([make_entry("6.9.0", status=KernelStatus.INSTALLED), e1, e2])
+        with _mgr_ctx(tmp_path, [provider]):
+            mgr = KernelManager(arch="amd64")
+        candidates = mgr.remove_old_candidates(keep=1)
+        assert all(str(e.version) != "6.8.0" for e in candidates)
+
+    def test_returns_empty_when_nothing_to_remove(self, tmp_path):
+        entries = [make_entry("6.9.0", status=KernelStatus.INSTALLED)]
+        provider = _mock_provider(entries)
+        with _mgr_ctx(tmp_path, [provider]):
+            mgr = KernelManager(arch="amd64")
+        assert mgr.remove_old_candidates(keep=1) == []
 
 
 class TestRemoveOld:
