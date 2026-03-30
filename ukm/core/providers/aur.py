@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import shutil
 import subprocess  # used in _makepkg_cmd
-from typing import Iterator
+from collections.abc import Iterator
 
 from ukm.core.kernel import KernelEntry, KernelFamily, KernelStatus, KernelVersion
 from ukm.core.providers.base import KernelProvider
@@ -113,7 +113,7 @@ class AURProvider(KernelProvider):
             return []
 
         running = system_info().running_kernel
-        entries: list[KernelEntry] = []
+        result: list[KernelEntry] = []
 
         for pkg in _AUR_KERNELS:
             ver_str, is_inst = self._query_pkg(pkg)
@@ -127,7 +127,7 @@ class AURProvider(KernelProvider):
             if self._backend.is_held(pkg):
                 status = KernelStatus.HELD
 
-            entries.append(KernelEntry(
+            result.append(KernelEntry(
                 version=KernelVersion(ver_str),
                 family=self.family,
                 provider_id=self.id,
@@ -139,7 +139,7 @@ class AURProvider(KernelProvider):
                 source_url=f"https://aur.archlinux.org/packages/{pkg}",
             ))
 
-        return sorted(entries, key=lambda e: e.version, reverse=True)
+        return sorted(result, key=lambda e: e.version, reverse=True)
 
     # ------------------------------------------------------------------
     # install()
@@ -151,14 +151,15 @@ class AURProvider(KernelProvider):
 
         if helper:
             yield f"Installing {pkg} via {helper}...\n"
-            cmd = [helper, "-S", "--noconfirm", pkg]
+            cmd: list[str] = [helper, "-S", "--noconfirm", pkg]
         else:
             yield f"Installing {pkg} via makepkg (no AUR helper found)...\n"
-            cmd = self._makepkg_cmd(pkg)
-            if cmd is None:
+            makepkg_cmd = self._makepkg_cmd(pkg)
+            if makepkg_cmd is None:
                 raise RuntimeError(
                     f"Cannot install {pkg}: no AUR helper and makepkg clone failed."
                 )
+            cmd = makepkg_cmd
 
         rc = 0
         for line in self._backend.stream(cmd):
@@ -215,7 +216,7 @@ class AURProvider(KernelProvider):
                         return ver, False
         else:
             # Fall back to AUR RPC
-            ver = self._aur_rpc_version(pkg)
+            ver = AURProvider._aur_rpc_version(pkg)
             if ver:
                 return ver, False
 
@@ -224,7 +225,8 @@ class AURProvider(KernelProvider):
     @staticmethod
     def _aur_rpc_version(pkg: str) -> str:
         """Query the AUR RPC API for the latest version of a package."""
-        import urllib.request, json
+        import json
+        import urllib.request
         url = f"https://aur.archlinux.org/rpc/v5/info?arg[]={pkg}"
         try:
             with urllib.request.urlopen(url, timeout=8) as r:
@@ -241,7 +243,8 @@ class AURProvider(KernelProvider):
         Clone the AUR package and return the makepkg install command.
         Returns None if the clone fails.
         """
-        import tempfile, os
+        import tempfile
+
         tmpdir = tempfile.mkdtemp(prefix="ukm-aur-")
         clone_url = f"https://aur.archlinux.org/{pkg}.git"
         rc = subprocess.run(

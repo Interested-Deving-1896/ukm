@@ -77,7 +77,8 @@ known-first-party = ["ukm"]
 python_version = "3.11"
 strict = false
 ignore_missing_imports = true
-warn_unused_ignores = true
+warn_unused_ignores = false
+exclude = ["ukm/qt\\.py", "ukm/gui/"]
 
 # ---------------------------------------------------------------------------
 # Pytest

@@ -9,8 +9,7 @@ Repository: https://xanmod.org
 
 from __future__ import annotations
 
-import re
-from typing import Iterator
+from collections.abc import Iterator
 
 from ukm.core.kernel import KernelEntry, KernelFamily, KernelStatus, KernelVersion
 from ukm.core.providers.base import KernelProvider
@@ -79,7 +78,6 @@ class XanModProvider(KernelProvider):
 
     def is_repo_configured(self) -> bool:
         """Return True if the XanMod apt repository is already set up."""
-        import subprocess
         rc, out, _ = self._backend._run(["apt-cache", "search", "linux-xanmod"])
         return rc == 0 and "xanmod" in out.lower()
 

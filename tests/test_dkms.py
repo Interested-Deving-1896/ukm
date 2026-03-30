@@ -5,7 +5,7 @@ from __future__ import annotations
 import unittest.mock as mock
 from ukm.core.dkms import (
     is_available, status, modules_for_kernel,
-    status_summary, DkmsModule,
+    status_summary,
 )
 
 _DKMS_STATUS_OUTPUT = """\

@@ -98,7 +98,9 @@ class PacmanBackend(PackageBackend):
         if not found and add:
             new_lines.append(f"\nIgnorePkg = {' '.join(packages)}\n")
 
-        import tempfile, os
+        import os
+        import tempfile
+
         with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".conf") as f:
             f.writelines(new_lines)
             tmp = f.name

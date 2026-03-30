@@ -12,7 +12,7 @@ deliver. The UI and CLI filter providers by the current system architecture.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Iterator
+from collections.abc import Iterator
 
 from ukm.core.kernel import KernelEntry, KernelFamily
 

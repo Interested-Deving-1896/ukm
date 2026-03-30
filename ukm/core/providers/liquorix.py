@@ -9,7 +9,7 @@ Repository: https://liquorix.net
 
 from __future__ import annotations
 
-from typing import Iterator
+from collections.abc import Iterator
 
 from ukm.core.kernel import KernelEntry, KernelFamily, KernelStatus, KernelVersion
 from ukm.core.providers.base import KernelProvider
@@ -56,7 +56,10 @@ class LiquorixProvider(KernelProvider):
         Liquorix provides an official install script that adds the repo and key.
         We download and execute it with privilege escalation.
         """
-        import shutil, urllib.request, tempfile, os
+        import os
+        import tempfile
+        import urllib.request
+
         from ukm.core.system import privilege_escalation_cmd
 
         yield "Downloading Liquorix install script...\n"
@@ -70,10 +73,9 @@ class LiquorixProvider(KernelProvider):
 
         os.chmod(script_path, 0o755)
         yield "Running Liquorix install script...\n"
-        for line in self._backend.stream(
+        yield from self._backend.stream(
             privilege_escalation_cmd() + ["bash", script_path]
-        ):
-            yield line
+        )
         os.unlink(script_path)
         yield "Liquorix repository configured.\n"
 
@@ -94,7 +96,7 @@ class LiquorixProvider(KernelProvider):
 
         installed_raw = self._backend.installed_packages("linux-image-liquorix")
         running = system_info().running_kernel
-        entries: list[KernelEntry] = []
+        result: list[KernelEntry] = []
 
         for line in out.splitlines():
             pkg_name = line.split()[0] if line.split() else ""
@@ -116,7 +118,7 @@ class LiquorixProvider(KernelProvider):
             if self._backend.is_held(pkg_name):
                 status = KernelStatus.HELD
 
-            entries.append(KernelEntry(
+            result.append(KernelEntry(
                 version=KernelVersion(ver_str),
                 family=self.family,
                 provider_id=self.id,
@@ -127,7 +129,7 @@ class LiquorixProvider(KernelProvider):
                 held=self._backend.is_held(pkg_name),
             ))
 
-        return sorted(entries, key=lambda e: e.version, reverse=True)
+        return sorted(result, key=lambda e: e.version, reverse=True)
 
     def install(self, entry: KernelEntry) -> Iterator[str]:
         from ukm.core.system import privilege_escalation_cmd

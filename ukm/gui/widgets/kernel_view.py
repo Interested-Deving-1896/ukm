@@ -8,14 +8,14 @@ KernelView — a QTableView wired to a KernelTableModel with:
 
 from __future__ import annotations
 
+from ukm.core.kernel import KernelEntry, KernelFamily, KernelStatus
+from ukm.gui.kernel_model import KernelTableModel
 from ukm.qt import (
     Qt, QWidget, QVBoxLayout, QHBoxLayout,
     QTableView, QHeaderView, QLineEdit, QComboBox,
     QLabel, QSortFilterProxyModel, QAbstractItemView,
-    QMenu, QAction, Signal,
+    QMenu, Signal,
 )
-from ukm.core.kernel import KernelEntry, KernelFamily, KernelStatus
-from ukm.gui.kernel_model import KernelTableModel, COL_VERSION, COL_STATUS, COL_FAMILY
 
 
 class KernelFilterProxy(QSortFilterProxyModel):
@@ -201,7 +201,9 @@ class KernelView(QWidget):
 
     @staticmethod
     def _open_url(url: str) -> None:
-        import subprocess, shutil
+        import shutil
+        import subprocess
+
         for browser in ("xdg-open", "open"):
             if shutil.which(browser):
                 subprocess.Popen([browser, url])

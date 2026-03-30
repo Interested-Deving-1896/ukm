@@ -12,7 +12,6 @@ import re
 from dataclasses import dataclass, field
 from enum import Enum, auto
 from functools import total_ordering
-from typing import Optional
 
 
 class KernelStatus(Enum):
@@ -45,7 +44,7 @@ class KernelVersion:
     major: int = field(init=False)
     minor: int = field(init=False)
     patch: int = field(init=False)
-    pre: Optional[str] = field(init=False)   # "rc3", "pre1", None
+    pre: str | None = field(init=False)   # "rc3", "pre1", None
     suffix: str = field(init=False)          # everything after the numeric part
 
     _RC_RE = re.compile(r"^(\d+)\.(\d+)(?:\.(\d+))?(?:-(rc\d+|pre\d+))?(.*)$", re.I)
@@ -80,7 +79,7 @@ class KernelVersion:
         return (self.major, self.minor, self.patch, self._pre_key()) == \
                (other.major, other.minor, other.patch, other._pre_key())
 
-    def __lt__(self, other: "KernelVersion") -> bool:
+    def __lt__(self, other: KernelVersion) -> bool:
         if not isinstance(other, KernelVersion):
             return NotImplemented
         return (self.major, self.minor, self.patch, self._pre_key()) < \
@@ -115,9 +114,9 @@ class KernelEntry:
     held:        bool = False
 
     # Metadata
-    size_bytes:  Optional[int] = None
-    checksum:    Optional[str] = None   # sha256 hex
-    source_url:  Optional[str] = None
+    size_bytes:  int | None = None
+    checksum:    str | None = None   # sha256 hex
+    source_url:  str | None = None
     notes:       str = ""
 
     @property

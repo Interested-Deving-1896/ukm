@@ -16,7 +16,7 @@ Package name patterns per family:
 from __future__ import annotations
 
 import re
-from typing import Iterator
+from collections.abc import Iterator
 
 from ukm.core.kernel import KernelEntry, KernelFamily, KernelStatus, KernelVersion
 from ukm.core.providers.base import KernelProvider
@@ -118,7 +118,7 @@ class DistroNativeProvider(KernelProvider):
             return []
 
         installed = set(self._backend.installed_packages("linux-image"))
-        entries: list[KernelEntry] = []
+        result: list[KernelEntry] = []
 
         for line in out.splitlines():
             pkg = line.split()[0] if line.split() else ""
@@ -138,7 +138,7 @@ class DistroNativeProvider(KernelProvider):
             if self._backend.is_held(pkg):
                 status = KernelStatus.HELD
 
-            entries.append(KernelEntry(
+            result.append(KernelEntry(
                 version=KernelVersion(ver_str),
                 family=self.family,
                 provider_id=self.id,
@@ -149,10 +149,10 @@ class DistroNativeProvider(KernelProvider):
                 held=self._backend.is_held(pkg),
             ))
 
-        return sorted(entries, key=lambda e: e.version, reverse=True)
+        return sorted(result, key=lambda e: e.version, reverse=True)
 
     def _list_pacman(self, arch: str, running: str) -> list[KernelEntry]:
-        entries: list[KernelEntry] = []
+        result: list[KernelEntry] = []
         for pkg in _PACMAN_KERNELS:
             # Check if available in repos
             rc, out, _ = self._backend._run(["pacman", "-Si", pkg])
@@ -174,7 +174,7 @@ class DistroNativeProvider(KernelProvider):
             if self._backend.is_held(pkg):
                 status = KernelStatus.HELD
 
-            entries.append(KernelEntry(
+            result.append(KernelEntry(
                 version=KernelVersion(ver_str),
                 family=self.family,
                 provider_id=self.id,
@@ -185,7 +185,7 @@ class DistroNativeProvider(KernelProvider):
                 held=self._backend.is_held(pkg),
             ))
 
-        return sorted(entries, key=lambda e: e.version, reverse=True)
+        return sorted(result, key=lambda e: e.version, reverse=True)
 
     def _list_dnf(self, arch: str, running: str) -> list[KernelEntry]:
         rc, out, _ = self._backend._run(
@@ -199,7 +199,7 @@ class DistroNativeProvider(KernelProvider):
         )
         installed_set = set(inst_out.splitlines()) if installed_rc == 0 else set()
 
-        entries: list[KernelEntry] = []
+        result: list[KernelEntry] = []
         for line in out.splitlines():
             parts = line.split()
             if len(parts) < 2 or not parts[0].startswith("kernel"):
@@ -213,7 +213,7 @@ class DistroNativeProvider(KernelProvider):
                 KernelStatus.INSTALLED if is_inst else KernelStatus.AVAILABLE
             )
 
-            entries.append(KernelEntry(
+            result.append(KernelEntry(
                 version=KernelVersion(ver_str),
                 family=self.family,
                 provider_id=self.id,
@@ -223,7 +223,7 @@ class DistroNativeProvider(KernelProvider):
                 status=status,
             ))
 
-        return sorted(entries, key=lambda e: e.version, reverse=True)
+        return sorted(result, key=lambda e: e.version, reverse=True)
 
     def _list_zypper(self, arch: str, running: str) -> list[KernelEntry]:
         rc, out, _ = self._backend._run(
@@ -232,7 +232,7 @@ class DistroNativeProvider(KernelProvider):
         if rc != 0:
             return []
 
-        entries: list[KernelEntry] = []
+        result: list[KernelEntry] = []
         for line in out.splitlines():
             if "|" not in line:
                 continue
@@ -250,7 +250,7 @@ class DistroNativeProvider(KernelProvider):
                 KernelStatus.INSTALLED if is_inst else KernelStatus.AVAILABLE
             )
 
-            entries.append(KernelEntry(
+            result.append(KernelEntry(
                 version=KernelVersion(ver_str),
                 family=self.family,
                 provider_id=self.id,
@@ -260,14 +260,14 @@ class DistroNativeProvider(KernelProvider):
                 status=status,
             ))
 
-        return sorted(entries, key=lambda e: e.version, reverse=True)
+        return sorted(result, key=lambda e: e.version, reverse=True)
 
     def _list_apk(self, arch: str, running: str) -> list[KernelEntry]:
         rc, out, _ = self._backend._run(["apk", "search", "linux-"])
         if rc != 0:
             return []
 
-        entries: list[KernelEntry] = []
+        result: list[KernelEntry] = []
         for line in out.splitlines():
             pkg = line.strip()
             if not pkg.startswith("linux-"):
@@ -283,7 +283,7 @@ class DistroNativeProvider(KernelProvider):
                 KernelStatus.INSTALLED if is_inst else KernelStatus.AVAILABLE
             )
 
-            entries.append(KernelEntry(
+            result.append(KernelEntry(
                 version=KernelVersion(ver_str),
                 family=self.family,
                 provider_id=self.id,
@@ -293,7 +293,7 @@ class DistroNativeProvider(KernelProvider):
                 status=status,
             ))
 
-        return sorted(entries, key=lambda e: e.version, reverse=True)
+        return sorted(result, key=lambda e: e.version, reverse=True)
 
     # ------------------------------------------------------------------
 

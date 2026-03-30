@@ -19,8 +19,8 @@ a compilation dialog; the CLI exposes it via `ukm gentoo compile`.
 from __future__ import annotations
 
 import re
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Iterator
 
 from ukm.core.kernel import KernelEntry, KernelFamily, KernelStatus, KernelVersion
 from ukm.core.providers.base import KernelProvider
@@ -102,7 +102,7 @@ class GentooProvider(KernelProvider):
         if refresh:
             self._portage.refresh_cache()
 
-        entries: list[KernelEntry] = []
+        result: list[KernelEntry] = []
 
         # --- Package-mode entries (emerge-installable) ---
         for atom in _GENTOO_KERNEL_PACKAGES:
@@ -120,7 +120,7 @@ class GentooProvider(KernelProvider):
                 if self._portage.is_held(atom):
                     status = KernelStatus.HELD
 
-                entries.append(KernelEntry(
+                result.append(KernelEntry(
                     version=KernelVersion(ver_str),
                     family=self.family,
                     provider_id=self.id,
@@ -141,7 +141,7 @@ class GentooProvider(KernelProvider):
             is_compiled = self._is_compiled(src_path)
             status = KernelStatus.INSTALLED if is_compiled else KernelStatus.AVAILABLE
 
-            entries.append(KernelEntry(
+            result.append(KernelEntry(
                 version=KernelVersion(ver_str),
                 family=self.family,
                 provider_id=self.id,
@@ -153,7 +153,7 @@ class GentooProvider(KernelProvider):
                 notes="Source tree — use 'Compile' to build",
             ))
 
-        return sorted(entries, key=lambda e: e.version, reverse=True)
+        return sorted(result, key=lambda e: e.version, reverse=True)
 
     # ------------------------------------------------------------------
     # install() — package mode
@@ -177,8 +177,7 @@ class GentooProvider(KernelProvider):
         cmd = privilege_escalation_cmd() + [
             "emerge", "--ask=n", "--quiet-build", "--noreplace", versioned_atom
         ]
-        for line in self._portage.stream(cmd):
-            yield line
+        yield from self._portage.stream(cmd)
 
         # Confirm installation succeeded
         rc, out, err = self._portage._run(["equery", "list", "-i", versioned_atom])
@@ -305,5 +304,7 @@ class GentooProvider(KernelProvider):
     def _is_compiled(src_path: str) -> bool:
         """Check if a vmlinuz or bzImage exists for this source tree."""
         src = Path(src_path)
-        return (src / "arch" / "x86" / "boot" / "bzImage").exists() or \
-               any(Path("/boot").glob(f"vmlinuz-*{src.name.replace('linux-', '')}*"))
+        if (src / "arch" / "x86" / "boot" / "bzImage").exists():
+            return True
+        stem = src.name.replace("linux-", "")
+        return any(Path("/boot").glob(f"vmlinuz-*{stem}*"))

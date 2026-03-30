@@ -7,7 +7,7 @@ Displayed at the bottom of the main window, collapsible.
 from __future__ import annotations
 
 from ukm.qt import (
-    Qt, QWidget, QVBoxLayout, QHBoxLayout,
+    QWidget, QVBoxLayout, QHBoxLayout,
     QTextEdit, QPushButton, QLabel, QSizePolicy, QFont,
 )
 

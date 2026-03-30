@@ -1,7 +1,6 @@
 """Tests for system detection helpers."""
 
-import pytest
-from ukm.core.system import _normalise_arch, _read_os_release, DistroFamily
+from ukm.core.system import _normalise_arch, _read_os_release
 
 
 class TestNormaliseArch:

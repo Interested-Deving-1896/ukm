@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from ukm.qt import (
-    QDialog, QDialogButtonBox, QVBoxLayout, QLabel, QTextEdit, Qt,
-)
 from ukm.core.kernel import KernelEntry
+from ukm.qt import (
+    QDialog, QDialogButtonBox, QLabel, QTextEdit, QVBoxLayout,
+)
 
 
 class NoteDialog(QDialog):

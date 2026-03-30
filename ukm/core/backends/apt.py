@@ -5,7 +5,6 @@ APT/dpkg backend — Debian, Ubuntu, Mint, Pop!_OS, Kali, etc.
 from __future__ import annotations
 
 import shutil
-import subprocess
 
 from ukm.core.backends.base import PackageBackend
 from ukm.core.system import privilege_escalation_cmd
@@ -72,7 +71,9 @@ class AptBackend(PackageBackend):
         Add an apt repository and optionally import its signing key.
         Used by XanMod and Liquorix providers.
         """
-        import tempfile, os
+        import os
+        import tempfile
+
         priv = privilege_escalation_cmd()
 
         if key_url:

@@ -10,15 +10,15 @@ from __future__ import annotations
 
 from ukm.core.backends import get_backend
 from ukm.core.backends.portage import PortageBackend
+from ukm.core.providers.aur import AURProvider
 from ukm.core.providers.base import KernelProvider
+from ukm.core.providers.distro_native import DistroNativeProvider
+from ukm.core.providers.gentoo import GentooProvider
+from ukm.core.providers.liquorix import LiquorixProvider
+from ukm.core.providers.local_file import LocalFileProvider
 from ukm.core.providers.mainline_ppa import MainlinePPAProvider
 from ukm.core.providers.xanmod import XanModProvider
-from ukm.core.providers.liquorix import LiquorixProvider
-from ukm.core.providers.distro_native import DistroNativeProvider
-from ukm.core.providers.aur import AURProvider
-from ukm.core.providers.gentoo import GentooProvider
-from ukm.core.providers.local_file import LocalFileProvider
-from ukm.core.system import system_info, PackageManagerKind
+from ukm.core.system import PackageManagerKind, system_info
 
 
 def get_providers(arch: str | None = None) -> list[KernelProvider]:

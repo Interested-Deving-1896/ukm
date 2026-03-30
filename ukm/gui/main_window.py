@@ -27,24 +27,23 @@ Layout:
 
 from __future__ import annotations
 
-from ukm.qt import (
-    Qt, QMainWindow, QWidget, QVBoxLayout, QSplitter,
-    QTabWidget, QToolBar, QAction, QStatusBar, QLabel,
-    QMessageBox, QFileDialog, QThread, Signal, Slot,
-    QSizePolicy, QApplication,
-)
 from ukm import __version__
+from ukm.core.backends.portage import PortageBackend
 from ukm.core.kernel import KernelEntry, KernelFamily
 from ukm.core.manager import KernelManager
-from ukm.core.system import system_info
-from ukm.core.backends.portage import PortageBackend
 from ukm.core.providers.gentoo import GentooProvider
-from ukm.gui.kernel_model import KernelTableModel
+from ukm.core.system import system_info
+from ukm.gui.widgets.changelog_panel import ChangelogPanel
+from ukm.gui.widgets.gentoo_compile_dialog import GentooCompileDialog
 from ukm.gui.widgets.kernel_view import KernelView
 from ukm.gui.widgets.log_panel import LogPanel
 from ukm.gui.widgets.note_dialog import NoteDialog
-from ukm.gui.widgets.gentoo_compile_dialog import GentooCompileDialog
-from ukm.gui.widgets.changelog_panel import ChangelogPanel
+from ukm.qt import (
+    Qt, QMainWindow, QWidget, QVBoxLayout, QSplitter,
+    QTabWidget, QToolBar, QAction, QLabel,
+    QMessageBox, QFileDialog, QThread, Signal, Slot,
+    QApplication,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -323,8 +322,8 @@ class MainWindow(QMainWindow):
         )
         if not path:
             return
-        from ukm.core.providers.local_file import LocalFileProvider
         from ukm.core.backends import get_backend
+        from ukm.core.providers.local_file import LocalFileProvider
         provider = LocalFileProvider(get_backend())
         entry = provider.entry_from_path(path, system_info().arch)
         self._do_install(entry)

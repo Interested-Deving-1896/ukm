@@ -7,16 +7,13 @@ snapshot; it is safe to call multiple times (returns the same object).
 
 from __future__ import annotations
 
-import os
 import platform
-import re
 import shutil
 import subprocess
 from dataclasses import dataclass, field
-from enum import Enum, auto
+from enum import Enum
 from functools import lru_cache
 from pathlib import Path
-from typing import Optional
 
 
 class PackageManagerKind(Enum):

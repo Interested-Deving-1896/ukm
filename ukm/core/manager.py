@@ -8,9 +8,10 @@ the CLI and the GUI.
 
 from __future__ import annotations
 
+import contextlib
 import json
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Iterator
 
 from ukm.core.kernel import KernelEntry, KernelFamily, KernelStatus
 from ukm.core.providers import get_providers
@@ -46,11 +47,8 @@ class KernelManager:
         """Return all kernels from all available providers, sorted newest first."""
         entries: list[KernelEntry] = []
         for provider in self._providers:
-            try:
+            with contextlib.suppress(Exception):
                 entries.extend(provider.list(self._arch, refresh=refresh))
-            except Exception as e:
-                # Don't let one broken provider kill the whole list
-                pass
         # Apply persisted notes and locks
         for entry in entries:
             key = self._state_key(entry)

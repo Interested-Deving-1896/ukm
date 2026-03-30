@@ -7,13 +7,12 @@ set job count, and stream compilation output live.
 
 from __future__ import annotations
 
-from ukm.qt import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QComboBox,
-    QPushButton, QCheckBox, QDialogButtonBox, QSizePolicy,
-    QThread, Signal, Slot, Qt, QFont,
-)
-from ukm.gui.widgets.log_panel import LogPanel
 from ukm.core.providers.gentoo import GentooProvider
+from ukm.gui.widgets.log_panel import LogPanel
+from ukm.qt import (
+    QCheckBox, QComboBox, QDialog, QHBoxLayout, QLabel,
+    QPushButton, QSizePolicy, QThread, QVBoxLayout, Signal, Slot,
+)
 
 
 class _CompileWorker(QThread):

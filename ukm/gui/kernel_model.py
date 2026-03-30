@@ -8,7 +8,7 @@ Supports sorting and filtering via QSortFilterProxyModel.
 from __future__ import annotations
 
 from ukm.qt import (
-    Qt, QAbstractTableModel, QModelIndex, QPersistentModelIndex,
+    Qt, QAbstractTableModel,
     QColor, QFont,
 )
 from ukm.core.kernel import KernelEntry, KernelStatus
@@ -44,10 +44,10 @@ class KernelTableModel(QAbstractTableModel):
     # QAbstractTableModel interface
     # ------------------------------------------------------------------
 
-    def rowCount(self, parent=QModelIndex()) -> int:
+    def rowCount(self, parent=None) -> int:
         return len(self._entries)
 
-    def columnCount(self, parent=QModelIndex()) -> int:
+    def columnCount(self, parent=None) -> int:
         return len(HEADERS)
 
     def headerData(self, section: int, orientation, role=Qt.ItemDataRole.DisplayRole):
@@ -70,11 +70,10 @@ class KernelTableModel(QAbstractTableModel):
             if colour:
                 return colour
 
-        if role == Qt.ItemDataRole.FontRole:
-            if entry.is_running:
-                f = QFont()
-                f.setBold(True)
-                return f
+        if role == Qt.ItemDataRole.FontRole and entry.is_running:
+            f = QFont()
+            f.setBold(True)
+            return f
 
         if role == Qt.ItemDataRole.UserRole:
             # Return the raw KernelEntry for the delegate / action layer
@@ -116,14 +115,22 @@ class KernelTableModel(QAbstractTableModel):
 
     @staticmethod
     def _display(entry: KernelEntry, col: int) -> str:
-        if col == 0: return str(entry.version)
-        if col == 1: return entry.flavor
-        if col == 2: return entry.family.value
-        if col == 3: return entry.arch
-        if col == 4: return entry.status.name.lower()
-        if col == 5: return "●" if entry.held else ""
-        if col == 6: return entry.provider_id
-        if col == 7: return entry.notes[:60] + "…" if len(entry.notes) > 60 else entry.notes
+        if col == 0:
+            return str(entry.version)
+        if col == 1:
+            return entry.flavor
+        if col == 2:
+            return entry.family.value
+        if col == 3:
+            return entry.arch
+        if col == 4:
+            return entry.status.name.lower()
+        if col == 5:
+            return "●" if entry.held else ""
+        if col == 6:
+            return entry.provider_id
+        if col == 7:
+            return entry.notes[:60] + "…" if len(entry.notes) > 60 else entry.notes
         return ""
 
     @staticmethod

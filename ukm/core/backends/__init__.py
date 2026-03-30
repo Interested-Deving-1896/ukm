@@ -6,13 +6,13 @@ Use get_backend() to obtain the correct backend for the current system.
 
 from __future__ import annotations
 
-from ukm.core.backends.base import PackageBackend
-from ukm.core.backends.apt import AptBackend
-from ukm.core.backends.pacman import PacmanBackend
-from ukm.core.backends.dnf import DnfBackend
-from ukm.core.backends.zypper import ZypperBackend
 from ukm.core.backends.apk import ApkBackend
+from ukm.core.backends.apt import AptBackend
+from ukm.core.backends.base import PackageBackend
+from ukm.core.backends.dnf import DnfBackend
+from ukm.core.backends.pacman import PacmanBackend
 from ukm.core.backends.portage import PortageBackend
+from ukm.core.backends.zypper import ZypperBackend
 from ukm.core.system import PackageManagerKind, system_info
 
 _BACKEND_MAP: dict[PackageManagerKind, type[PackageBackend]] = {

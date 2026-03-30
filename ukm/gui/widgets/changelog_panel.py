@@ -7,12 +7,11 @@ Fetches changelog text in a background thread so the UI never blocks.
 
 from __future__ import annotations
 
-from ukm.qt import (
-    Qt, QWidget, QVBoxLayout, QHBoxLayout,
-    QLabel, QTextEdit, QPushButton, QSizePolicy,
-    QThread, Signal, Slot, QFont,
-)
 from ukm.core.kernel import KernelEntry
+from ukm.qt import (
+    QFont, QHBoxLayout, QLabel, QPushButton, QSizePolicy,
+    QTextEdit, QThread, QVBoxLayout, QWidget, Signal, Slot,
+)
 
 
 class _FetchWorker(QThread):

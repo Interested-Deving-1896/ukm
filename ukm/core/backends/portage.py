@@ -11,7 +11,6 @@ Source-mode operations are long-running and should always be streamed
 
 from __future__ import annotations
 
-import re
 import shutil
 from pathlib import Path
 
@@ -83,7 +82,9 @@ class PortageBackend(PackageBackend):
         try:
             existing = mask_file.read_text() if mask_file.exists() else ""
             new_content = existing + "".join(lines)
-            import tempfile, os
+            import os
+            import tempfile
+
             with tempfile.NamedTemporaryFile(mode="w", delete=False) as f:
                 f.write(new_content)
                 tmp = f.name
@@ -103,10 +104,12 @@ class PortageBackend(PackageBackend):
         try:
             lines = mask_file.read_text().splitlines(keepends=True)
             new_lines = [
-                l for l in lines
-                if not any(pkg in l for pkg in packages)
+                line for line in lines
+                if not any(pkg in line for pkg in packages)
             ]
-            import tempfile, os
+            import os
+            import tempfile
+
             with tempfile.NamedTemporaryFile(mode="w", delete=False) as f:
                 f.writelines(new_lines)
                 tmp = f.name

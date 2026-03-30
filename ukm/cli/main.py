@@ -147,7 +147,7 @@ def _dkms_summary() -> str:
 
 def cmd_info(mgr: KernelManager) -> int:
     info = system_info()
-    from ukm.core.cpu import recommended_xanmod_level, xanmod_level_description
+    from ukm.core.cpu import recommended_xanmod_level
     xanmod_level = recommended_xanmod_level() if info.arch == "amd64" else "n/a"
     data = {
         "distro":                  info.distro.name,
@@ -457,7 +457,8 @@ def cmd_notify(args: dict) -> int:
 
 def cmd_notify_enable() -> int:
     """Install and enable the systemd user timer for background notifications."""
-    import shutil, subprocess
+    import shutil
+    import subprocess
     from pathlib import Path
 
     systemd_user_dir = Path.home() / ".config" / "systemd" / "user"
@@ -472,8 +473,7 @@ def cmd_notify_enable() -> int:
         if not src.exists():
             out.error(f"Unit file not found: {src}")
             return 1
-        import shutil as sh
-        sh.copy2(src, dst)
+        shutil.copy2(src, dst)
         out.info(f"  Installed {dst}")
 
     if shutil.which("systemctl"):
@@ -488,7 +488,8 @@ def cmd_notify_enable() -> int:
 
 def cmd_notify_disable() -> int:
     """Disable and remove the systemd user timer."""
-    import shutil, subprocess
+    import shutil
+    import subprocess
     from pathlib import Path
 
     if shutil.which("systemctl"):

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import unittest.mock as mock
 from ukm.core.kernel import KernelFamily, KernelStatus
-from ukm.core.providers.distro_native import DistroNativeProvider, _PACMAN_KERNELS
+from ukm.core.providers.distro_native import DistroNativeProvider
 from ukm.core.system import PackageManagerKind
 
 
