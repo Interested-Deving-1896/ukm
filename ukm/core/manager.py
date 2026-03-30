@@ -8,7 +8,6 @@ the CLI and the GUI.
 
 from __future__ import annotations
 
-import contextlib
 import json
 from collections.abc import Iterator
 from pathlib import Path
@@ -26,6 +25,7 @@ class KernelManager:
         self._arch = arch or system_info().arch
         self._providers: list[KernelProvider] = get_providers(self._arch)
         self._state: dict = self._load_state()
+        self._provider_errors: dict[str, str] = {}
 
     # ------------------------------------------------------------------
     # Provider access
@@ -42,12 +42,23 @@ class KernelManager:
     # Kernel listing
     # ------------------------------------------------------------------
 
+    @property
+    def provider_errors(self) -> dict[str, str]:
+        """
+        Map of provider_id → error message for any providers that failed
+        during the last call to list_all(). Empty when all providers succeeded.
+        """
+        return dict(self._provider_errors)
+
     def list_all(self, refresh: bool = False) -> list[KernelEntry]:
         """Return all kernels from all available providers, sorted newest first."""
         entries: list[KernelEntry] = []
+        self._provider_errors = {}
         for provider in self._providers:
-            with contextlib.suppress(Exception):
+            try:
                 entries.extend(provider.fetch(self._arch, refresh=refresh))
+            except Exception as exc:  # noqa: BLE001
+                self._provider_errors[provider.id] = str(exc)
         # Apply persisted notes and locks
         for entry in entries:
             key = self._state_key(entry)
@@ -63,6 +74,26 @@ class KernelManager:
 
     def list_installed(self) -> list[KernelEntry]:
         return [e for e in self.list_all() if e.is_installed]
+
+    def latest(
+        self,
+        provider_id: str | None = None,
+        flavor: str = "",
+        refresh: bool = False,
+    ) -> KernelEntry | None:
+        """
+        Return the newest available kernel, optionally filtered by provider
+        and flavor. Returns None if no kernels are available.
+
+        When provider_id is None, the first available provider that has
+        kernels is used (providers are ordered by priority in get_providers).
+        """
+        entries = self.list_all(refresh=refresh)
+        if provider_id:
+            entries = [e for e in entries if e.provider_id == provider_id]
+        if flavor:
+            entries = [e for e in entries if e.flavor == flavor]
+        return entries[0] if entries else None
 
     def search(self, pattern: str, refresh: bool = False) -> list[KernelEntry]:
         """
@@ -157,17 +188,24 @@ class KernelManager:
     # Remove old kernels
     # ------------------------------------------------------------------
 
-    def remove_old(self, keep: int = 1, purge: bool = False) -> Iterator[str]:
+    def remove_old_candidates(self, keep: int = 1) -> list[KernelEntry]:
         """
-        Remove all installed kernels except the running one and the
-        `keep` most recent ones. Locked kernels are always preserved.
+        Return the kernels that *would* be removed by remove_old(keep=keep).
+        Does not modify anything — safe to call for dry-run previews.
         """
         installed = sorted(
             [e for e in self.list_installed() if not e.is_running and not e.held],
             key=lambda e: e.version,
             reverse=True,
         )
-        to_remove = installed[keep:]
+        return installed[keep:]
+
+    def remove_old(self, keep: int = 1, purge: bool = False) -> Iterator[str]:
+        """
+        Remove all installed kernels except the running one and the
+        `keep` most recent ones. Locked kernels are always preserved.
+        """
+        to_remove = self.remove_old_candidates(keep=keep)
         if not to_remove:
             yield "No old kernels to remove.\n"
             return

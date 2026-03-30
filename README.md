@@ -65,6 +65,10 @@ ukm list --installed              # installed only
 ukm list --json                   # machine-readable output
 ukm list --refresh                # force re-fetch index
 
+ukm update                        # install the newest available kernel (compares against installed)
+ukm update --provider=xanmod      # update from a specific provider
+ukm update --dry-run              # show what would be installed without making changes
+
 ukm search 6.9                    # search by version, flavor, family, or provider
 ukm search rt                     # find all real-time kernels
 ukm search xanmod --json          # machine-readable search results
@@ -83,6 +87,8 @@ ukm note 6.9.0 "stable, use this" # attach a note to a kernel
 
 ukm remove-old                    # remove all but running + most recent
 ukm remove-old --keep=2           # keep 2 most recent
+ukm remove-old --dry-run          # preview what would be removed without making changes
+ukm remove-old --dry-run --keep=2 # preview with custom keep count
 
 ukm providers                     # list available providers
 ukm info                          # system info (distro, arch, running kernel)

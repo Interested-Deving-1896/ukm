@@ -501,6 +501,43 @@ class TestCmdHoldEdgeCases:
 # ---------------------------------------------------------------------------
 
 
+class TestCmdRemoveOldDryRun:
+    def test_dry_run_prints_candidates(self, capsys):
+        e1 = _entry("6.8.0", status=KernelStatus.INSTALLED)
+        e2 = _entry("6.7.0", status=KernelStatus.INSTALLED)
+        mgr = _mock_mgr([e1, e2])
+        mgr.remove_old_candidates = mock.MagicMock(return_value=[e1, e2])
+        rc = _run(["remove-old", "--dry-run"], mgr)
+        assert rc == 0
+        captured = capsys.readouterr()
+        assert "6.8.0" in captured.out
+        assert "6.7.0" in captured.out
+        mgr.remove.assert_not_called()
+
+    def test_dry_run_nothing_to_remove(self, capsys):
+        mgr = _mock_mgr()
+        mgr.remove_old_candidates = mock.MagicMock(return_value=[])
+        rc = _run(["remove-old", "--dry-run"], mgr)
+        assert rc == 0
+        captured = capsys.readouterr()
+        assert "Nothing" in captured.out
+
+    def test_dry_run_shows_purge_suffix(self, capsys):
+        e1 = _entry("6.8.0", status=KernelStatus.INSTALLED)
+        mgr = _mock_mgr([e1])
+        mgr.remove_old_candidates = mock.MagicMock(return_value=[e1])
+        rc = _run(["remove-old", "--dry-run", "--purge"], mgr)
+        assert rc == 0
+        captured = capsys.readouterr()
+        assert "purge" in captured.out
+
+    def test_dry_run_respects_keep(self, capsys):
+        mgr = _mock_mgr()
+        mgr.remove_old_candidates = mock.MagicMock(return_value=[])
+        _run(["remove-old", "--dry-run", "--keep=3"], mgr)
+        mgr.remove_old_candidates.assert_called_once_with(keep=3)
+
+
 class TestCmdRemoveOldEdgeCases:
     def test_remove_old_with_keep(self, capsys):
         mgr = _mock_mgr()
@@ -586,6 +623,75 @@ class TestSecureBootWarning:
 # ---------------------------------------------------------------------------
 # list invalid family
 # ---------------------------------------------------------------------------
+
+
+class TestCmdUpdate:
+    def test_already_up_to_date(self, capsys):
+        installed = _entry("6.9.0", status=KernelStatus.INSTALLED)
+        mgr = _mock_mgr([installed])
+        mgr.latest = mock.MagicMock(return_value=installed)
+        mgr.list_installed = mock.MagicMock(return_value=[installed])
+        rc = _run(["update", "--yes"], mgr)
+        assert rc == 0
+        captured = capsys.readouterr()
+        assert "up to date" in captured.out.lower()
+
+    def test_installs_newer_kernel(self, capsys):
+        installed = _entry("6.8.0", status=KernelStatus.INSTALLED)
+        newer = _entry("6.9.0")
+        mgr = _mock_mgr([installed, newer])
+        mgr.latest = mock.MagicMock(return_value=newer)
+        mgr.list_installed = mock.MagicMock(return_value=[installed])
+        mgr.install = mock.MagicMock(return_value=iter(["Installing...\n"]))
+        rc = _run(["update", "--yes"], mgr)
+        assert rc == 0
+        mgr.install.assert_called_once_with(newer)
+
+    def test_dry_run_does_not_install(self, capsys):
+        installed = _entry("6.8.0", status=KernelStatus.INSTALLED)
+        newer = _entry("6.9.0")
+        mgr = _mock_mgr([installed, newer])
+        mgr.latest = mock.MagicMock(return_value=newer)
+        mgr.list_installed = mock.MagicMock(return_value=[installed])
+        rc = _run(["update", "--dry-run"], mgr)
+        assert rc == 0
+        mgr.install.assert_not_called()
+        captured = capsys.readouterr()
+        assert "dry-run" in captured.out.lower() or "Would install" in captured.out
+
+    def test_no_provider_returns_error(self, capsys):
+        mgr = _mock_mgr()
+        mgr.latest = mock.MagicMock(return_value=None)
+        rc = _run(["update", "--yes"], mgr)
+        assert rc != 0
+
+    def test_install_error_returns_nonzero(self, capsys):
+        installed = _entry("6.8.0", status=KernelStatus.INSTALLED)
+        newer = _entry("6.9.0")
+        mgr = _mock_mgr([installed, newer])
+        mgr.latest = mock.MagicMock(return_value=newer)
+        mgr.list_installed = mock.MagicMock(return_value=[installed])
+        mgr.install = mock.MagicMock(side_effect=RuntimeError("network error"))
+        rc = _run(["update", "--yes"], mgr)
+        assert rc != 0
+
+    def test_passes_provider_and_flavor(self, capsys):
+        mgr = _mock_mgr()
+        mgr.latest = mock.MagicMock(return_value=None)
+        _run(["update", "--provider=xanmod", "--flavor=edge", "--yes"], mgr)
+        mgr.latest.assert_called_once_with(
+            provider_id="xanmod", flavor="edge", refresh=True
+        )
+
+    def test_no_installed_kernels_still_installs(self, capsys):
+        newer = _entry("6.9.0")
+        mgr = _mock_mgr([newer])
+        mgr.latest = mock.MagicMock(return_value=newer)
+        mgr.list_installed = mock.MagicMock(return_value=[])
+        mgr.install = mock.MagicMock(return_value=iter(["Installing...\n"]))
+        rc = _run(["update", "--yes"], mgr)
+        assert rc == 0
+        mgr.install.assert_called_once()
 
 
 class TestCmdListInvalidFamily:

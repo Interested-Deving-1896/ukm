@@ -89,6 +89,7 @@ if _BINDING == "PySide6":
         QSplitter,
         QStatusBar,
         QToolBar,
+        QToolButton,
         QAction,
         QDialog,
         QDialogButtonBox,
@@ -99,6 +100,7 @@ if _BINDING == "PySide6":
         QSizePolicy,
         QAbstractItemView,
         QMenu,
+        QShortcut,
         QSystemTrayIcon,
     )
 
@@ -145,6 +147,7 @@ else:  # PyQt6
         QSplitter,
         QStatusBar,
         QToolBar,
+        QToolButton,
         QAction,
         QDialog,
         QDialogButtonBox,
@@ -155,6 +158,7 @@ else:  # PyQt6
         QSizePolicy,
         QAbstractItemView,
         QMenu,
+        QShortcut,
         QSystemTrayIcon,
     )
 

@@ -12,17 +12,19 @@ from ukm.core.kernel import KernelEntry, KernelFamily, KernelStatus
 from ukm.gui.kernel_model import KernelTableModel
 from ukm.qt import (
     Qt,
-    QWidget,
-    QVBoxLayout,
     QHBoxLayout,
-    QTableView,
     QHeaderView,
-    QLineEdit,
-    QComboBox,
+    QKeySequence,
     QLabel,
-    QSortFilterProxyModel,
-    QAbstractItemView,
+    QLineEdit,
     QMenu,
+    QAbstractItemView,
+    QComboBox,
+    QShortcut,
+    QSortFilterProxyModel,
+    QTableView,
+    QVBoxLayout,
+    QWidget,
     Signal,
 )
 
@@ -115,9 +117,14 @@ class KernelView(QWidget):
         filter_bar = QHBoxLayout()
 
         self._search = QLineEdit()
-        self._search.setPlaceholderText("Filter kernels…")
+        self._search.setPlaceholderText("Filter kernels…  (Ctrl+F)")
+        self._search.setClearButtonEnabled(True)
         self._search.textChanged.connect(self._proxy.setFilterFixedString)
         filter_bar.addWidget(self._search, stretch=3)
+
+        # Ctrl+F focuses the search box from anywhere in the widget
+        shortcut = QShortcut(QKeySequence("Ctrl+F"), self)
+        shortcut.activated.connect(self._search.setFocus)
 
         if not self._family_lock:
             filter_bar.addWidget(QLabel("Family:"))
