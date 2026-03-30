@@ -66,9 +66,7 @@ class ProgressPanel(QWidget):
         row = QHBoxLayout()
 
         self._phase_label = QLabel("Working…")
-        self._phase_label.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
-        )
+        self._phase_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         row.addWidget(self._phase_label)
 
         self._bar = QProgressBar()
@@ -100,6 +98,7 @@ class ProgressPanel(QWidget):
         self._bar.setValue(1 if success else 0)
         # Hide after a short delay so the user sees the final state
         from ukm.qt import QTimer
+
         QTimer.singleShot(1500, self.hide)
 
     def update_phase(self, log_line: str) -> None:

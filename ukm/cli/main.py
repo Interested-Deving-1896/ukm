@@ -582,7 +582,9 @@ def _shell_rc_files(shell_hint: str | None) -> list:
 
     if shell_hint and shell_hint not in ("auto", ""):
         if shell_hint in candidates:
-            return [f for f in candidates[shell_hint] if f.exists() or f == candidates[shell_hint][0]]
+            return [
+                f for f in candidates[shell_hint] if f.exists() or f == candidates[shell_hint][0]
+            ]
         # Treat as explicit path
         return [Path(shell_hint)]
 
@@ -654,6 +656,7 @@ def cmd_notify_shell_uninstall(args: dict) -> int:
             continue
         # Strip the block between markers (inclusive)
         import re
+
         new_content = re.sub(
             rf"\n?{re.escape(_SHELL_MARKER_BEGIN)}.*?{re.escape(_SHELL_MARKER_END)}\n?",
             "",
