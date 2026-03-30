@@ -15,9 +15,7 @@ optdepends=(
 )
 makedepends=("python-build" "python-installer" "python-hatchling")
 source=("$pkgname-$pkgver.tar.gz::https://github.com/ukm-project/ukm/archive/refs/tags/v$pkgver.tar.gz")
-# Update b2sums after tagging:
-#   curl -L https://github.com/ukm-project/ukm/archive/refs/tags/v0.1.1.tar.gz | b2sum
-b2sums=("SKIP")
+b2sums=("edb0643c6935a83db4443aa99b05de5c9f5d73874881039f8cd964c8a93b328da2365b920055cf771d02d9f9ca61cb50bd62fa3019091e9adc0be39c6b879223")
 
 build() {
     cd "$pkgname-$pkgver"
