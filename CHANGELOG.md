@@ -10,6 +10,30 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.1] — 2026-03-30
+
+### Added
+- `ukm update` — install the newest available kernel; supports `--provider`, `--flavor`, `--dry-run`, `--yes`
+- `ukm remove-old --dry-run` — preview what would be removed without making changes
+- `KernelManager.latest()` and `remove_old_candidates()` methods
+- GUI: `Ctrl+F` shortcut and native clear button on the kernel filter bar
+- GUI: "⚡ Providers" toolbar button showing per-provider status and errors
+- `CHANGELOG.md`
+- GitHub Release page for v0.1.0
+
+### Fixed
+- `ukm changelog` for non-Ubuntu distros: now dispatches to apt (Ubuntu+Debian),
+  dnf (Fedora/Bodhi), pacman (AUR), zypper (openSUSE OBS), apk (Alpine);
+  returns a useful fallback URL instead of empty string on network failure
+- Provider errors no longer silently swallowed — exposed via `KernelManager.provider_errors`
+  and shown in the GUI status bar
+
+### Tests
+- Portage backend: 24% → 99% coverage (42 new tests)
+- Overall: 80% → 83% coverage, 521 tests (up from 437)
+
+---
+
 ## [0.1.0] — 2026-03-30
 
 Initial release.

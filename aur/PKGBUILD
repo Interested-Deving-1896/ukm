@@ -1,6 +1,6 @@
 # Maintainer: ukm contributors <https://github.com/ukm-project/ukm>
 pkgname=ukm
-pkgver=0.1.0
+pkgver=0.1.1
 pkgrel=1
 pkgdesc="Universal Kernel Manager — install, remove, and manage Linux kernels across all major distros"
 arch=("any")
@@ -15,7 +15,9 @@ optdepends=(
 )
 makedepends=("python-build" "python-installer" "python-hatchling")
 source=("$pkgname-$pkgver.tar.gz::https://github.com/ukm-project/ukm/archive/refs/tags/v$pkgver.tar.gz")
-b2sums=("cc556dcbc84f34a97b80b05af31486a51334a6fc95489f31bb664a55e71c2d9436675e07cf9ebfb9d479a3e55f03b979836ee917acba0249d46595b186d93f51")
+# Update b2sums after tagging:
+#   curl -L https://github.com/ukm-project/ukm/archive/refs/tags/v0.1.1.tar.gz | b2sum
+b2sums=("SKIP")
 
 build() {
     cd "$pkgname-$pkgver"
