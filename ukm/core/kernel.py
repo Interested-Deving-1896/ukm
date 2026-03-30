@@ -67,7 +67,7 @@ class KernelVersion:
     def _pre_key(self) -> tuple[int, int]:
         """Returns a sortable key for the pre-release tag. No pre = highest."""
         if self.pre is None:
-            return (1, 0)
+            return (2, 0)  # release > rc > pre
         m = re.match(r"(rc|pre)(\d+)", self.pre)
         if m:
             tag_order = 0 if m.group(1) == "pre" else 1  # pre < rc < release
