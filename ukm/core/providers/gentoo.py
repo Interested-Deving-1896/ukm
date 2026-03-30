@@ -173,19 +173,17 @@ class GentooProvider(KernelProvider):
         versioned_atom = f"={atom}-{ver}"
 
         yield f"Installing {versioned_atom} via emerge...\n"
-        for line in self._portage.stream(
-            self._portage._run.__func__  # placeholder
-            if False else []
-        ):
+        from ukm.core.system import privilege_escalation_cmd
+        cmd = privilege_escalation_cmd() + [
+            "emerge", "--ask=n", "--quiet-build", "--noreplace", versioned_atom
+        ]
+        for line in self._portage.stream(cmd):
             yield line
 
-        rc, out, err = self._portage.install([versioned_atom])
-        if out:
-            yield out
-        if err:
-            yield err
+        # Confirm installation succeeded
+        rc, out, err = self._portage._run(["equery", "list", "-i", versioned_atom])
         if rc != 0:
-            raise RuntimeError(f"emerge failed (exit {rc})")
+            raise RuntimeError(f"emerge failed — {versioned_atom} not found after install")
         yield f"Kernel {entry.display_name} installed.\n"
 
     # ------------------------------------------------------------------

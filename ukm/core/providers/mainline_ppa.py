@@ -136,20 +136,19 @@ class MainlinePPAProvider(KernelProvider):
                 debs.append(dest)
 
             yield "Installing packages...\n"
-            for line in self._backend.stream(
-                self._backend._run.__func__  # use stream() not _run()
-                if False else [],            # placeholder — see below
-            ):
+            from ukm.core.system import privilege_escalation_cmd
+            install_cmd = privilege_escalation_cmd() + ["dpkg", "-i"] + [str(d) for d in debs]
+            rc = 0
+            for line in self._backend.stream(install_cmd):
                 yield line
-
-            # Actually install
-            rc, out, err = self._backend.install_local([str(d) for d in debs])
-            if out:
-                yield out
-            if err:
-                yield err
-            if rc != 0:
-                raise RuntimeError(f"dpkg install failed (exit {rc})")
+                if line.startswith("dpkg: error") or "Error" in line:
+                    rc = 1
+            # Confirm via dpkg exit code by re-querying status
+            check_rc, _, _ = self._backend._run(
+                ["dpkg-query", "-W", "-f=${Status}", f"linux-image-{ver}-generic"]
+            )
+            if check_rc != 0 and rc != 0:
+                raise RuntimeError(f"dpkg install failed for kernel {ver}")
             yield f"Kernel {ver} installed successfully.\n"
 
     # ------------------------------------------------------------------

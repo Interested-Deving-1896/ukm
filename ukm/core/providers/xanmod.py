@@ -50,6 +50,11 @@ class XanModProvider(KernelProvider):
     def id(self) -> str:
         return "xanmod"
 
+    def recommended_flavor(self) -> str:
+        """Return the highest XanMod ISA level the current CPU supports."""
+        from ukm.core.cpu import recommended_xanmod_level
+        return recommended_xanmod_level()
+
     @property
     def display_name(self) -> str:
         return "XanMod"
@@ -156,23 +161,32 @@ class XanModProvider(KernelProvider):
                 held=self._backend.is_held(pkg_name),
             )
 
-        return sorted(entries.values(), key=lambda e: (e.version, e.flavor), reverse=True)
+        recommended = self.recommended_flavor()
+        result = sorted(entries.values(), key=lambda e: (e.version, e.flavor), reverse=True)
+        for entry in result:
+            if entry.flavor == recommended and not entry.description:
+                entry.description = (
+                    f"{XANMOD_FLAVORS.get(recommended, '')} ★ recommended for this CPU"
+                )
+            elif entry.flavor == recommended:
+                entry.description += " ★ recommended for this CPU"
+        return result
 
     def install(self, entry: KernelEntry) -> Iterator[str]:
+        from ukm.core.system import privilege_escalation_cmd
         pkg = self._pkg_name(entry)
-        yield f"Installing {pkg}...\n"
-        for line in self._backend.stream(
-            self._backend._run.__func__  # placeholder
-            if False else []
-        ):
+        headers_pkg = pkg.replace("linux-xanmod", "linux-headers-xanmod")
+        yield f"Installing {pkg} and {headers_pkg}...\n"
+        cmd = privilege_escalation_cmd() + [
+            "apt-get", "install", "-y", "--no-install-recommends", pkg, headers_pkg
+        ]
+        rc = 0
+        for line in self._backend.stream(cmd):
             yield line
-        rc, out, err = self._backend.install([pkg, pkg.replace("linux-xanmod", "linux-headers-xanmod")])
-        if out:
-            yield out
-        if err:
-            yield err
+            if "E:" in line or "error" in line.lower():
+                rc = 1
         if rc != 0:
-            raise RuntimeError(f"Installation failed (exit {rc})")
+            raise RuntimeError(f"Installation failed for {pkg}")
         yield f"XanMod kernel {entry.display_name} installed.\n"
 
     def remove(self, entry: KernelEntry, purge: bool = False) -> Iterator[str]:

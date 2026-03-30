@@ -1,0 +1,3 @@
+ukm/ usr/lib/python3/dist-packages/
+share/systemd/ukm-notify.service usr/lib/systemd/user/
+share/systemd/ukm-notify.timer usr/lib/systemd/user/

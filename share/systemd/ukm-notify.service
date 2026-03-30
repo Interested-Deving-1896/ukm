@@ -1,0 +1,15 @@
+[Unit]
+Description=ukm kernel update notifier
+Documentation=https://github.com/ukm-project/ukm
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/ukm notify
+# Suppress output when running silently in the background
+StandardOutput=null
+StandardError=journal
+
+[Install]
+WantedBy=default.target

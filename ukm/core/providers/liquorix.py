@@ -130,17 +130,21 @@ class LiquorixProvider(KernelProvider):
         return sorted(entries, key=lambda e: e.version, reverse=True)
 
     def install(self, entry: KernelEntry) -> Iterator[str]:
+        from ukm.core.system import privilege_escalation_cmd
         ver = str(entry.version)
-        image_pkg = f"linux-image-liquorix-amd64"
-        headers_pkg = f"linux-headers-liquorix-amd64"
+        image_pkg = "linux-image-liquorix-amd64"
+        headers_pkg = "linux-headers-liquorix-amd64"
         yield f"Installing Liquorix kernel {ver}...\n"
-        rc, out, err = self._backend.install([image_pkg, headers_pkg])
-        if out:
-            yield out
-        if err:
-            yield err
+        cmd = privilege_escalation_cmd() + [
+            "apt-get", "install", "-y", "--no-install-recommends", image_pkg, headers_pkg
+        ]
+        rc = 0
+        for line in self._backend.stream(cmd):
+            yield line
+            if "E:" in line or "error" in line.lower():
+                rc = 1
         if rc != 0:
-            raise RuntimeError(f"Installation failed (exit {rc})")
+            raise RuntimeError(f"Installation failed for Liquorix {ver}")
         yield f"Liquorix kernel {ver} installed.\n"
 
     def remove(self, entry: KernelEntry, purge: bool = False) -> Iterator[str]:

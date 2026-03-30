@@ -44,6 +44,7 @@ from ukm.gui.widgets.kernel_view import KernelView
 from ukm.gui.widgets.log_panel import LogPanel
 from ukm.gui.widgets.note_dialog import NoteDialog
 from ukm.gui.widgets.gentoo_compile_dialog import GentooCompileDialog
+from ukm.gui.widgets.changelog_panel import ChangelogPanel
 
 
 # ---------------------------------------------------------------------------
@@ -118,9 +119,26 @@ class MainWindow(QMainWindow):
         root.setContentsMargins(4, 4, 4, 4)
         root.setSpacing(0)
 
-        # Splitter: tabs on top, log panel on bottom
+        # Outer horizontal splitter: [tabs+log | changelog panel]
+        h_splitter = QSplitter(Qt.Orientation.Horizontal)
+        root.addWidget(h_splitter)
+
+        # Left side: vertical splitter (tabs on top, log on bottom)
+        left_widget = QWidget()
+        left_layout = QVBoxLayout(left_widget)
+        left_layout.setContentsMargins(0, 0, 0, 0)
+        left_layout.setSpacing(0)
         splitter = QSplitter(Qt.Orientation.Vertical)
-        root.addWidget(splitter)
+        left_layout.addWidget(splitter)
+        h_splitter.addWidget(left_widget)
+
+        # Changelog panel on the right
+        self._changelog = ChangelogPanel()
+        self._changelog.setMinimumWidth(260)
+        self._changelog.setMaximumWidth(480)
+        h_splitter.addWidget(self._changelog)
+        h_splitter.setStretchFactor(0, 3)
+        h_splitter.setStretchFactor(1, 1)
 
         # Tab widget
         self._tabs = QTabWidget()
@@ -141,6 +159,13 @@ class MainWindow(QMainWindow):
             (KernelFamily.DISTRO,    "Distro"),
             (KernelFamily.LOCAL,     "Local"),
         ]
+        # AUR tab — shown on Arch systems; reuses DISTRO family filtered by provider
+        from ukm.core.system import PackageManagerKind
+        if system_info().package_manager == PackageManagerKind.PACMAN:
+            aur_view = KernelView(family_filter="")
+            self._tabs.addTab(aur_view, "AUR")
+            self._aur_view = aur_view
+            self._connect_view(aur_view)
         for family, label in tab_families:
             view = KernelView(family_filter=family.value)
             self._tabs.addTab(view, label)
@@ -223,12 +248,14 @@ class MainWindow(QMainWindow):
     def _setup_statusbar(self) -> None:
         sb = self.statusBar()
         info = system_info()
+        from ukm.core import dkms
         self._status_distro = QLabel(f"  {info.distro.name}")
         self._status_arch   = QLabel(f"  {info.arch}")
         self._status_kernel = QLabel(f"  Running: {info.running_kernel}")
         self._status_pm     = QLabel(f"  {info.package_manager.value}")
+        self._status_dkms   = QLabel(f"  DKMS: {dkms.status_summary()}")
         for lbl in (self._status_distro, self._status_arch,
-                    self._status_kernel, self._status_pm):
+                    self._status_kernel, self._status_pm, self._status_dkms):
             sb.addPermanentWidget(lbl)
 
     # ------------------------------------------------------------------
@@ -242,10 +269,21 @@ class MainWindow(QMainWindow):
         view.unhold_requested.connect(self._do_unhold)
         view.note_requested.connect(self._do_note)
         view.refresh_requested.connect(lambda: self._refresh(force=True))
+        # Wire table selection → changelog panel
+        view._table.selectionModel().currentRowChanged.connect(
+            lambda cur, _prev: self._on_selection_changed(view)
+        )
 
     # ------------------------------------------------------------------
     # Toolbar action handlers
     # ------------------------------------------------------------------
+
+    def _on_selection_changed(self, view: KernelView) -> None:
+        entry = view.selected_entry()
+        if entry:
+            self._changelog.show_entry(entry)
+        else:
+            self._changelog.clear()
 
     def _on_install(self) -> None:
         entry = self._current_view().selected_entry()

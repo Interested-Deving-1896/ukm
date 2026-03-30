@@ -87,6 +87,9 @@ class KernelManager:
                 f"{provider.availability_reason()}"
             )
         yield from provider.install(entry)
+        # Rebuild DKMS modules for the newly installed kernel
+        from ukm.core import dkms
+        yield from dkms.autoinstall(str(entry.version))
 
     def remove(self, entry: KernelEntry, purge: bool = False) -> Iterator[str]:
         if entry.is_running:
@@ -99,6 +102,9 @@ class KernelManager:
         if provider is None:
             raise RuntimeError(f"Provider '{entry.provider_id}' not found.")
         yield from provider.remove(entry, purge=purge)
+        # Clean up DKMS module builds for the removed kernel
+        from ukm.core import dkms
+        yield from dkms.remove_kernel(str(entry.version))
 
     # ------------------------------------------------------------------
     # Hold / Lock

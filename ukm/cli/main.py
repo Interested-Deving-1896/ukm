@@ -11,6 +11,12 @@ Usage:
   ukm remove-old [--keep=<n>] [--purge] [--yes]
   ukm providers
   ukm info
+  ukm notify [--provider=<id>]
+  ukm notify-enable
+  ukm notify-disable
+  ukm cpu
+  ukm dkms
+  ukm changelog <version> [--provider=<id>] [--flavor=<flavor>]
   ukm gentoo compile <src-path> [--genkernel] [--make] [--jobs=<n>]
   ukm gentoo configure <src-path> [--target=<target>]
   ukm gentoo sources
@@ -101,6 +107,28 @@ def main(argv: list[str] | None = None) -> int:
     if args["note"]:
         return cmd_note(mgr, args)
 
+    # ------------------------------------------------------------ notify
+    if args["notify"]:
+        return cmd_notify(args)
+
+    if args["notify-enable"]:
+        return cmd_notify_enable()
+
+    if args["notify-disable"]:
+        return cmd_notify_disable()
+
+    # --------------------------------------------------------------- cpu
+    if args["cpu"]:
+        return cmd_cpu()
+
+    # -------------------------------------------------------------- dkms
+    if args["dkms"]:
+        return cmd_dkms()
+
+    # --------------------------------------------------------- changelog
+    if args["changelog"]:
+        return cmd_changelog(mgr, args)
+
     # ------------------------------------------------------------- gentoo
     if args["gentoo"]:
         return cmd_gentoo(mgr, args)
@@ -114,17 +142,21 @@ def main(argv: list[str] | None = None) -> int:
 
 def cmd_info(mgr: KernelManager) -> int:
     info = system_info()
+    from ukm.core.cpu import recommended_xanmod_level, xanmod_level_description
+    xanmod_level = recommended_xanmod_level() if info.arch == "amd64" else "n/a"
     data = {
-        "distro":          info.distro.name,
-        "distro_id":       info.distro.id,
-        "distro_family":   info.distro.family.value,
-        "arch":            info.arch,
-        "arch_raw":        info.arch_raw,
-        "package_manager": info.package_manager.value,
-        "running_kernel":  info.running_kernel,
-        "secure_boot":     info.has_secure_boot,
-        "pkexec":          info.has_pkexec,
-        "sudo":            info.has_sudo,
+        "distro":                  info.distro.name,
+        "distro_id":               info.distro.id,
+        "distro_family":           info.distro.family.value,
+        "arch":                    info.arch,
+        "arch_raw":                info.arch_raw,
+        "package_manager":         info.package_manager.value,
+        "running_kernel":          info.running_kernel,
+        "secure_boot":             info.has_secure_boot,
+        "pkexec":                  info.has_pkexec,
+        "sudo":                    info.has_sudo,
+        "recommended_xanmod":      xanmod_level,
+        "dkms":                    __import__("ukm.core.dkms", fromlist=["status_summary"]).status_summary(),
     }
     if out._json_mode:
         out.print_json(data)
@@ -327,6 +359,147 @@ def cmd_note(mgr: KernelManager, args: dict) -> int:
 
     mgr.set_note(entry, text)
     out.success(f"Note saved for {entry.display_name}.")
+    return 0
+
+
+def cmd_cpu() -> int:
+    from ukm.core.cpu import cpu_summary
+    data = cpu_summary()
+    if out._json_mode:
+        out.print_json(data)
+    else:
+        out.info(f"  Recommended XanMod level : {data['recommended_xanmod_level']}")
+        out.info(f"  Description              : {data['description']}")
+        out.info(f"  AVX-512                  : {'yes' if data['has_avx512'] else 'no'}")
+        out.info(f"  AVX2                     : {'yes' if data['has_avx2'] else 'no'}")
+        out.info(f"  SSE4.2                   : {'yes' if data['has_sse4_2'] else 'no'}")
+        out.info(f"  CPU flags detected       : {data['flag_count']}")
+    return 0
+
+
+def cmd_changelog(mgr: KernelManager, args: dict) -> int:
+    from ukm.core.changelog import fetch
+    version    = args["<version>"]
+    provider_id = args.get("--provider") or ""
+    flavor     = args.get("--flavor") or ""
+
+    # Try to resolve provider_id from the kernel list if not given
+    if not provider_id:
+        entry = _find_entry(mgr, version, None, flavor)
+        if entry:
+            provider_id = entry.provider_id
+            flavor = flavor or entry.flavor
+
+    if not provider_id:
+        out.error(f"Cannot determine provider for '{version}'. Use --provider=<id>.")
+        return 1
+
+    out.info(f"Fetching changelog for {version} ({provider_id})…")
+    text = fetch(provider_id, version, flavor)
+    if not text:
+        out.warn("No changelog available for this kernel.")
+        return 0
+
+    if out._json_mode:
+        out.print_json({"version": version, "provider": provider_id, "changelog": text})
+    else:
+        out.info(text)
+    return 0
+
+
+def cmd_dkms() -> int:
+    from ukm.core import dkms
+    if not dkms.is_available():
+        out.warn("dkms is not installed. Install it to enable automatic module rebuilds.")
+        return 0
+    modules = dkms.status()
+    if not modules:
+        out.info("No DKMS modules registered.")
+        return 0
+    rows = [
+        {
+            "name":    m.name,
+            "version": m.version,
+            "kernel":  m.kernel,
+            "arch":    m.arch,
+            "status":  m.status,
+        }
+        for m in modules
+    ]
+    if out._json_mode:
+        out.print_json(rows)
+    else:
+        out.print_table(rows, [
+            ("name",    "Module"),
+            ("version", "Version"),
+            ("kernel",  "Kernel"),
+            ("arch",    "Arch"),
+            ("status",  "Status"),
+        ])
+    return 0
+
+
+def cmd_notify(args: dict) -> int:
+    from ukm.core.notify import check_and_notify
+    provider_id = args.get("--provider") or "mainline_ppa"
+    sent = check_and_notify(provider_id=provider_id)
+    if sent:
+        out.success("Notification sent.")
+    else:
+        out.info("No notification sent (no newer kernel found or cooldown active).")
+    return 0
+
+
+def cmd_notify_enable() -> int:
+    """Install and enable the systemd user timer for background notifications."""
+    import shutil, subprocess
+    from pathlib import Path
+
+    systemd_user_dir = Path.home() / ".config" / "systemd" / "user"
+    systemd_user_dir.mkdir(parents=True, exist_ok=True)
+
+    share_dir = Path(__file__).parent.parent.parent / "share" / "systemd"
+    units = ["ukm-notify.service", "ukm-notify.timer"]
+
+    for unit in units:
+        src = share_dir / unit
+        dst = systemd_user_dir / unit
+        if not src.exists():
+            out.error(f"Unit file not found: {src}")
+            return 1
+        import shutil as sh
+        sh.copy2(src, dst)
+        out.info(f"  Installed {dst}")
+
+    if shutil.which("systemctl"):
+        subprocess.run(["systemctl", "--user", "daemon-reload"], check=False)
+        subprocess.run(["systemctl", "--user", "enable", "--now", "ukm-notify.timer"], check=False)
+        out.success("ukm-notify.timer enabled and started.")
+        out.info("  ukm will check for new kernels every 12 hours.")
+    else:
+        out.warn("systemctl not found. Add ukm-notify.timer to your session startup manually.")
+    return 0
+
+
+def cmd_notify_disable() -> int:
+    """Disable and remove the systemd user timer."""
+    import shutil, subprocess
+    from pathlib import Path
+
+    if shutil.which("systemctl"):
+        subprocess.run(["systemctl", "--user", "disable", "--now", "ukm-notify.timer"], check=False)
+
+    systemd_user_dir = Path.home() / ".config" / "systemd" / "user"
+    for unit in ["ukm-notify.service", "ukm-notify.timer"]:
+        f = systemd_user_dir / unit
+        if f.exists():
+            f.unlink()
+            out.info(f"  Removed {f}")
+
+    if shutil.which("systemctl"):
+        subprocess.run(["systemctl", "--user", "daemon-reload"], check=False)
+
+    out.success("ukm notifications disabled.")
     return 0
 
 
