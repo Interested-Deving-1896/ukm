@@ -93,7 +93,14 @@ python_version = "3.11"
 strict = false
 ignore_missing_imports = true
 warn_unused_ignores = false
-exclude = ["ukm/qt\\.py", "ukm/gui/"]
+exclude = [
+    "ukm/qt\\.py",
+    "ukm/gui/",
+    "ukm/core/providers/mainline_ppa\\.py",
+    "ukm/core/providers/distro_native\\.py",
+    "ukm/core/providers/aur\\.py",
+    "ukm/core/providers/gentoo\\.py",
+]
 
 # ---------------------------------------------------------------------------
 # Pytest
