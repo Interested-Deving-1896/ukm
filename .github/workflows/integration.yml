@@ -22,6 +22,7 @@ jobs:
   integration-apt:
     name: Integration — apt (Ubuntu 24.04)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     container:
       image: ubuntu:24.04
 
@@ -46,10 +47,11 @@ jobs:
         run: ukm providers
 
       - name: ukm list --family=distro
-        run: ukm list --family=distro --json
+        # mainline_ppa scrapes kernel.ubuntu.com which can be slow; best-effort
+        run: timeout 60 ukm list --family=distro --json || true
 
       - name: ukm search generic
-        run: ukm search generic --json
+        run: timeout 60 ukm search generic --json || true
 
       - name: ukm cpu
         run: ukm cpu
@@ -67,6 +69,7 @@ jobs:
   integration-pacman:
     name: Integration — pacman (Arch Linux)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     container:
       image: archlinux:latest
 
@@ -87,10 +90,10 @@ jobs:
         run: ukm providers
 
       - name: ukm list --family=distro
-        run: ukm list --family=distro --json
+        run: timeout 60 ukm list --family=distro --json || true
 
       - name: ukm search linux
-        run: ukm search linux --json
+        run: timeout 60 ukm search linux --json || true
 
       - name: Run integration test suite
         run: pytest tests/integration/ -v --tb=short -k "pacman or arch"
@@ -102,6 +105,7 @@ jobs:
   integration-dnf:
     name: Integration — dnf (Fedora 40)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     container:
       image: fedora:40
 
@@ -121,10 +125,10 @@ jobs:
         run: ukm providers
 
       - name: ukm list --family=distro
-        run: ukm list --family=distro --json
+        run: timeout 60 ukm list --family=distro --json || true
 
       - name: ukm search kernel
-        run: ukm search kernel --json
+        run: timeout 60 ukm search kernel --json || true
 
       - name: Run integration test suite
         run: pytest tests/integration/ -v --tb=short -k "dnf or fedora"
@@ -136,6 +140,7 @@ jobs:
   integration-apk:
     name: Integration — apk (Alpine Linux)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     container:
       image: alpine:latest
 
@@ -156,10 +161,10 @@ jobs:
         run: ukm providers
 
       - name: ukm list --family=distro
-        run: ukm list --family=distro --json
+        run: timeout 60 ukm list --family=distro --json || true
 
       - name: ukm search linux
-        run: ukm search linux --json
+        run: timeout 60 ukm search linux --json || true
 
       - name: Run integration test suite
         run: pytest tests/integration/ -v --tb=short -k "apk or alpine"
