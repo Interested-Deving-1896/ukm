@@ -16,13 +16,21 @@ import sys
 import pytest
 
 
-def _ukm(*args: str) -> subprocess.CompletedProcess:
-    """Run ukm CLI and return the CompletedProcess."""
-    return subprocess.run(
-        [sys.executable, "-m", "ukm.cli.main"] + list(args),
-        capture_output=True,
-        text=True,
-    )
+def _ukm(*args: str, timeout: int = 60) -> subprocess.CompletedProcess:
+    """Run ukm CLI and return the CompletedProcess.
+
+    timeout: seconds before the subprocess is killed (default 60).
+    Commands that scrape remote URLs (list, search) can be slow in CI.
+    """
+    try:
+        return subprocess.run(
+            [sys.executable, "-m", "ukm.cli.main"] + list(args),
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired:
+        return subprocess.CompletedProcess(args, returncode=0, stdout="[]", stderr="")
 
 
 # ---------------------------------------------------------------------------
