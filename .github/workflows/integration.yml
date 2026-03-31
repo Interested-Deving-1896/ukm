@@ -146,7 +146,8 @@ jobs:
         run: apk add --no-cache python3 py3-pip
 
       - name: Install ukm
-        run: pip3 install --break-system-packages -e ".[dev]"
+        # PySide6 has no musl wheel; use dev-no-gui on Alpine
+        run: pip3 install --break-system-packages -e ".[dev-no-gui]"
 
       - name: ukm info
         run: ukm info
