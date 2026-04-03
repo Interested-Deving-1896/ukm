@@ -1,13 +1,5 @@
 name: Integration Tests
 
-# Runs against real package managers in purpose-built containers.
-# Triggered on push/PR to main, and manually.
-#
-# Each job installs ukm into a real distro container and exercises the
-# CLI against the system's actual package manager. These tests are
-# intentionally narrow — they verify that the provider/backend wiring
-# works end-to-end, not that every kernel version is correct.
-
 on:
   push:
     branches: ["main"]
@@ -16,9 +8,6 @@ on:
   workflow_dispatch:
 
 jobs:
-  # ---------------------------------------------------------------------------
-  # apt / dpkg — Ubuntu 24.04 (Noble)
-  # ---------------------------------------------------------------------------
   integration-apt:
     name: Integration — apt (Ubuntu 24.04)
     runs-on: ubuntu-latest
@@ -47,7 +36,6 @@ jobs:
         run: ukm providers
 
       - name: ukm list --family=distro
-        # mainline_ppa scrapes kernel.ubuntu.com which can be slow; best-effort
         run: timeout 60 ukm list --family=distro --json || true
 
       - name: ukm search generic
@@ -61,11 +49,8 @@ jobs:
 
       - name: Run integration test suite
         run: pytest tests/integration/ -v --tb=short
-        continue-on-error: true  # integration tests may need root; best-effort
+        continue-on-error: true
 
-  # ---------------------------------------------------------------------------
-  # pacman — Arch Linux
-  # ---------------------------------------------------------------------------
   integration-pacman:
     name: Integration — pacman (Arch Linux)
     runs-on: ubuntu-latest
@@ -99,9 +84,6 @@ jobs:
         run: pytest tests/integration/ -v --tb=short -k "pacman or arch"
         continue-on-error: true
 
-  # ---------------------------------------------------------------------------
-  # dnf — Fedora 40
-  # ---------------------------------------------------------------------------
   integration-dnf:
     name: Integration — dnf (Fedora 40)
     runs-on: ubuntu-latest
@@ -134,9 +116,6 @@ jobs:
         run: pytest tests/integration/ -v --tb=short -k "dnf or fedora"
         continue-on-error: true
 
-  # ---------------------------------------------------------------------------
-  # apk — Alpine Linux
-  # ---------------------------------------------------------------------------
   integration-apk:
     name: Integration — apk (Alpine Linux)
     runs-on: ubuntu-latest
@@ -151,8 +130,13 @@ jobs:
         run: apk add --no-cache python3 py3-pip
 
       - name: Install ukm
-        # PySide6 has no musl wheel; use dev-no-gui on Alpine
         run: pip3 install --break-system-packages -e ".[dev-no-gui]"
+
+      - name: Check for pyside6 dependency
+        run: |
+          if ! pip3 install pyside6; then
+            echo "pyside6 not found, skipping installation."
+          fi
 
       - name: ukm info
         run: ukm info
