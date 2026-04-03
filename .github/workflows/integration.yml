@@ -132,12 +132,6 @@ jobs:
       - name: Install ukm
         run: pip3 install --break-system-packages -e ".[dev-no-gui]"
 
-      - name: Check for pyside6 dependency
-        run: |
-          if ! pip3 install pyside6; then
-            echo "pyside6 not found, skipping installation."
-          fi
-
       - name: ukm info
         run: ukm info
 
