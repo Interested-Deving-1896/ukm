@@ -26,6 +26,9 @@ jobs:
             dpkg apt curl gpg \
             libnotify-bin
 
+      - name: Install pyside6
+        run: pip3 install pyside6>=6.5
+
       - name: Install ukm
         run: pip3 install --break-system-packages -e ".[dev,pyside6]"
 
@@ -65,6 +68,9 @@ jobs:
         run: |
           pacman -Sy --noconfirm python python-pip
 
+      - name: Install pyside6
+        run: pip install pyside6>=6.5
+
       - name: Install ukm
         run: pip install --break-system-packages -e ".[dev,pyside6]"
 
@@ -97,6 +103,9 @@ jobs:
       - name: Install system dependencies
         run: dnf install -y python3 python3-pip
 
+      - name: Install pyside6
+        run: pip3 install pyside6>=6.5
+
       - name: Install ukm
         run: pip3 install -e ".[dev,pyside6]"
 
@@ -128,6 +137,9 @@ jobs:
 
       - name: Install system dependencies
         run: apk add --no-cache python3 py3-pip
+
+      - name: Install pyside6
+        run: pip3 install pyside6>=6.5
 
       - name: Install ukm
         run: pip3 install --break-system-packages -e ".[dev,pyside6]"
