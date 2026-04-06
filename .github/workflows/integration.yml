@@ -136,10 +136,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install system dependencies
-        run: apk add --no-cache python3 py3-pip
-
-      - name: Install pyside6
-        run: pip3 install pyside6>=6.5
+        run: apk add --no-cache python3 py3-pip py3-pyside6
 
       - name: Install ukm
         run: pip3 install --break-system-packages -e ".[dev,pyside6]"
