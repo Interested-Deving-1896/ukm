@@ -68,26 +68,29 @@ jobs:
         run: |
           pacman -Sy --noconfirm python python-pip
 
+      - name: Create virtual environment
+        run: python -m venv venv
+
       - name: Install pyside6
-        run: pip install pyside6>=6.5
+        run: venv/bin/pip install pyside6>=6.5
 
       - name: Install ukm
-        run: pip install --break-system-packages -e ".[dev,pyside6]"
+        run: venv/bin/pip install --break-system-packages -e ".[dev,pyside6]"
 
       - name: ukm info
-        run: ukm info
+        run: venv/bin/ukm info
 
       - name: ukm providers
-        run: ukm providers
+        run: venv/bin/ukm providers
 
       - name: ukm list --family=distro
-        run: timeout 60 ukm list --family=distro --json || true
+        run: timeout 60 venv/bin/ukm list --family=distro --json || true
 
       - name: ukm search linux
-        run: timeout 60 ukm search linux --json || true
+        run: timeout 60 venv/bin/ukm search linux --json || true
 
       - name: Run integration test suite
-        run: pytest tests/integration/ -v --tb=short -k "pacman or arch"
+        run: venv/bin/pytest tests/integration/ -v --tb=short -k "pacman or arch"
         continue-on-error: true
 
   integration-dnf:
