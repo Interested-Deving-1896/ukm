@@ -26,32 +26,35 @@ jobs:
             dpkg apt curl gpg \
             libnotify-bin
 
+      - name: Create virtual environment
+        run: python3 -m venv venv
+
       - name: Install pyside6
-        run: pip3 install pyside6>=6.5
+        run: venv/bin/pip install pyside6>=6.5
 
       - name: Install ukm
-        run: pip3 install --break-system-packages -e ".[dev,pyside6]"
+        run: venv/bin/pip install --break-system-packages -e ".[dev,pyside6]"
 
       - name: ukm info
-        run: ukm info
+        run: venv/bin/ukm info
 
       - name: ukm providers
-        run: ukm providers
+        run: venv/bin/ukm providers
 
       - name: ukm list --family=distro
-        run: timeout 60 ukm list --family=distro --json || true
+        run: timeout 60 venv/bin/ukm list --family=distro --json || true
 
       - name: ukm search generic
-        run: timeout 60 ukm search generic --json || true
+        run: timeout 60 venv/bin/ukm search generic --json || true
 
       - name: ukm cpu
-        run: ukm cpu
+        run: venv/bin/ukm cpu
 
       - name: ukm dkms
-        run: ukm dkms
+        run: venv/bin/ukm dkms
 
       - name: Run integration test suite
-        run: pytest tests/integration/ -v --tb=short
+        run: venv/bin/pytest tests/integration/ -v --tb=short
         continue-on-error: true
 
   integration-pacman:
@@ -106,26 +109,29 @@ jobs:
       - name: Install system dependencies
         run: dnf install -y python3 python3-pip
 
+      - name: Create virtual environment
+        run: python3 -m venv venv
+
       - name: Install pyside6
-        run: pip3 install pyside6>=6.5
+        run: venv/bin/pip install pyside6>=6.5
 
       - name: Install ukm
-        run: pip3 install -e ".[dev,pyside6]"
+        run: venv/bin/pip install -e ".[dev,pyside6]"
 
       - name: ukm info
-        run: ukm info
+        run: venv/bin/ukm info
 
       - name: ukm providers
-        run: ukm providers
+        run: venv/bin/ukm providers
 
       - name: ukm list --family=distro
-        run: timeout 60 ukm list --family=distro --json || true
+        run: timeout 60 venv/bin/ukm list --family=distro --json || true
 
       - name: ukm search kernel
-        run: timeout 60 ukm search kernel --json || true
+        run: timeout 60 venv/bin/ukm search kernel --json || true
 
       - name: Run integration test suite
-        run: pytest tests/integration/ -v --tb=short -k "dnf or fedora"
+        run: venv/bin/pytest tests/integration/ -v --tb=short -k "dnf or fedora"
         continue-on-error: true
 
   integration-apk:
