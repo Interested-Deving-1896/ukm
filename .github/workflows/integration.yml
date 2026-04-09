@@ -30,7 +30,7 @@ jobs:
         run: python3 -m venv venv
 
       - name: Install pyside6
-        run: venv/bin/pip install pyside6>=6.5
+        run: venv/bin/pip install 'pyside6>=6.5'
 
       - name: Install ukm
         run: venv/bin/pip install --break-system-packages -e ".[dev,pyside6]"
@@ -75,7 +75,7 @@ jobs:
         run: python -m venv venv
 
       - name: Install pyside6
-        run: venv/bin/pip install pyside6>=6.5
+        run: venv/bin/pip install 'pyside6>=6.5'
 
       - name: Install ukm
         run: venv/bin/pip install --break-system-packages -e ".[dev,pyside6]"
@@ -113,7 +113,7 @@ jobs:
         run: python3 -m venv venv
 
       - name: Install pyside6
-        run: venv/bin/pip install pyside6>=6.5
+        run: venv/bin/pip install 'pyside6>=6.5'
 
       - name: Install ukm
         run: venv/bin/pip install -e ".[dev,pyside6]"
