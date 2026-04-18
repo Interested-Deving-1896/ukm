@@ -3,7 +3,7 @@
 ## Development setup
 
 ```bash
-git clone https://github.com/Interested-Deving-1896/ukm
+git clone https://gitlab.com/OSPF1896/ukm
 cd ukm
 pip install -e ".[dev]"
 ```
