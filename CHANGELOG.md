@@ -85,5 +85,5 @@ Initial release.
 - AUR PKGBUILD + `.SRCINFO`
 - 437 unit tests, 80% coverage
 
-[Unreleased]: https://gitlab.com/OSPF1896/ukm/compare/v0.1.0...HEAD
-[0.1.0]: https://gitlab.com/OSPF1896/ukm/releases/tag/v0.1.0
+[Unreleased]: https://gitlab.com/openos-project/linux-kernel_filesystem_deving/ukm/compare/v0.1.0...HEAD
+[0.1.0]: https://gitlab.com/openos-project/linux-kernel_filesystem_deving/ukm/releases/tag/v0.1.0

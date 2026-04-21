@@ -3,7 +3,7 @@
 ## Development setup
 
 ```bash
-git clone https://gitlab.com/OSPF1896/ukm
+git clone https://gitlab.com/openos-project/linux-kernel_filesystem_deving/ukm
 cd ukm
 pip install -e ".[dev]"
 ```
