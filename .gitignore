@@ -36,3 +36,4 @@ htmlcov/
 
 # ukm runtime cache/state (user-specific)
 # ~/.cache/ukm and ~/.config/ukm are outside the repo
+.npmrc
